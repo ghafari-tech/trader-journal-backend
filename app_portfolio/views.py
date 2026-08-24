@@ -39,3 +39,51 @@ def portfolio_create(request):
         'message': 'Portfolio created successfully',
         'portfolio': AddPortfolioSerializer(portfolio).data
     }, status=201)
+
+@extend_schema(
+    tags=['Portfolio'],
+    request=AddPortfolioSerializer
+)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def portfolio_edit(request, pk):
+    portfolio = get_object_or_404(
+        Portfolio,
+        pk=pk,
+        user=request.user
+    )
+
+    serializer = AddPortfolioSerializer(
+        portfolio,
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response({
+            'message': 'Invalid data',
+            'errors': serializer.errors
+        }, status=400)
+
+    portfolio = serializer.save()
+
+    return Response({
+        'message': 'Portfolio updated successfully',
+        'portfolio': AddPortfolioSerializer(portfolio).data
+    }, status=200)
+
+
+@extend_schema(tags=['Portfolio'])
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def portfolio_delete(request, pk):
+    portfolio = get_object_or_404(
+        Portfolio,
+        pk=pk,
+        user=request.user
+    )
+
+    portfolio.delete()
+
+    return Response({
+        'message': 'Portfolio deleted successfully'
+    }, status=200)
