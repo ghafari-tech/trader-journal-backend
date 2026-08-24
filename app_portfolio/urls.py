@@ -6,4 +6,5 @@ urlpatterns = [
     path('add/', views.portfolio_create, name='portfolio_add'),
     path('portfolio/<int:pk>/edit/', views.portfolio_edit, name='portfolio-edit'),
     path('portfolio/<int:pk>/delete/', views.portfolio_delete, name='portfolio-delete'),
+    path('portfolio/<int:pk>/archive/', views.portfolio_archive, name='portfolio-archive'),
 ]

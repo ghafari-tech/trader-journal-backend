@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def portfolio_list(request):
-    portfolios = Portfolio.objects.filter(user=request.user)
+    portfolios = Portfolio.objects.filter(user=request.user, is_archived=False)
 
     serializer = PortfolioSerializer(portfolios, many=True)
 
@@ -86,4 +86,21 @@ def portfolio_delete(request, pk):
 
     return Response({
         'message': 'Portfolio deleted successfully'
+    }, status=200)
+
+@extend_schema(tags=['Portfolio'])
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def portfolio_archive(request, pk):
+    portfolio = get_object_or_404(
+        Portfolio,
+        pk=pk,
+        user=request.user
+    )
+
+    portfolio.is_archived = True
+    portfolio.save(update_fields=['is_archived'])
+
+    return Response({
+        'message': 'Portfolio archived successfully'
     }, status=200)
