@@ -17,3 +17,25 @@ def portfolio_list(request):
     return Response({
         'portfolios': serializer.data
     }, status=200)
+
+@extend_schema(
+    tags=['Portfolio'],
+    request=AddPortfolioSerializer
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def portfolio_create(request):
+    serializer = AddPortfolioSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        return Response({
+            'message': 'Invalid data',
+            'errors': serializer.errors
+        }, status=400)
+
+    portfolio = serializer.save(user=request.user)
+
+    return Response({
+        'message': 'Portfolio created successfully',
+        'portfolio': AddPortfolioSerializer(portfolio).data
+    }, status=201)
