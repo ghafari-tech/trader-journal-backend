@@ -11,9 +11,9 @@ from django.shortcuts import get_object_or_404
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def goal_list(request):
-    journals = Goal.objects.filter(user=request.user)
+    goals = Goal.objects.filter(user=request.user)
 
-    serializer = GoalSerializer(journals, many=True)
+    serializer = GoalSerializer(goals, many=True)
 
     return Response({
         'goals': serializer.data

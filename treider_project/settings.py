@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-!)$s9#wa^mudl3n)x*+cz#=zy(emehw#&9z26-v(o$2rxd&a2k
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['trade.piqagram.ir']
+ALLOWED_HOSTS = ['trade.piqagram.ir', '127.0.0.1']
 
 
 # Application definition
@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'app_goal',
     'app_notification',
     'app_riskmanage',
-    'corsheaders'
+    'corsheaders',
+    'app_portfolio'
 ]
 
 MIDDLEWARE = [
