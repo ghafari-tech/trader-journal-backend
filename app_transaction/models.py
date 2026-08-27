@@ -1,5 +1,8 @@
+from decimal import Decimal
+
 from django.db import models
 from django.core.validators import RegexValidator
+
 from app_user.models import User
 
 
@@ -10,7 +13,11 @@ class Transaction(models.Model):
         ("sell", "فروش"),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="transactions")
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="transactions"
+    )
 
     transaction_id = models.CharField(
         max_length=20,
@@ -50,6 +57,7 @@ class Transaction(models.Model):
         decimal_places=8
     )
 
+    # نسبت ریسک به ریواردی که برای معامله تعیین شده
     risk_reward = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -57,6 +65,7 @@ class Transaction(models.Model):
         blank=True
     )
 
+    # سود یا ضرر واقعی معامله
     profit_loss = models.DecimalField(
         max_digits=20,
         decimal_places=2,
@@ -66,6 +75,14 @@ class Transaction(models.Model):
 
     followed_plan = models.BooleanField(
         default=False
+    )
+
+    # اگر این فیلد در پروژه‌ات استفاده می‌شود نگهش دار
+    r_r = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=False,
+        blank=False
     )
 
     created_at = models.DateTimeField(
@@ -78,8 +95,14 @@ class Transaction(models.Model):
     )
 
     def save(self, *args, **kwargs):
+
+        # ساخت Transaction ID
         if not self.transaction_id:
-            last_transaction = Transaction.objects.order_by("-id").first()
+            last_transaction = (
+                Transaction.objects
+                .order_by("-id")
+                .first()
+            )
 
             if last_transaction:
                 last_number = int(
@@ -91,7 +114,42 @@ class Transaction(models.Model):
 
             self.transaction_id = f"T-{number}"
 
+        # محاسبه سود و ضرر معامله
+        if self.exit_price is not None:
+
+            if self.transaction_type == "buy":
+                profit = (
+                    self.exit_price - self.entry_price
+                ) * self.volume
+
+            else:  # sell
+                profit = (
+                    self.entry_price - self.exit_price
+                ) * self.volume
+
+            self.profit_loss = profit.quantize(
+                Decimal("0.01")
+            )
+
         super().save(*args, **kwargs)
+
+    @property
+    def total_reward(self):
+        """
+        سود یا ضرر واقعی معامله
+        """
+
+        if self.exit_price is None:
+            return None
+
+        if self.transaction_type == "buy":
+            return (
+                self.exit_price - self.entry_price
+            ) * self.volume
+
+        return (
+            self.entry_price - self.exit_price
+        ) * self.volume
 
     def __str__(self):
         return self.transaction_id

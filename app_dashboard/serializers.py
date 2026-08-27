@@ -1,15 +1,6 @@
 from rest_framework import serializers
-from .models import Transaction
+from app_transaction.models import Transaction
 
-
-class TransactionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Transaction
-        fields = '__all__'
-
-#=================================|
-#============DASHBOARD============|
-#=================================\/
 
 class TransactionDashboardSerializer(serializers.ModelSerializer):
     class Meta:
