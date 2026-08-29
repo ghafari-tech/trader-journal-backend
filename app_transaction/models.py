@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import models
 from django.core.validators import RegexValidator
 
+from app_portfolio.models import Portfolio
 from app_user.models import User
 
 
@@ -13,11 +14,7 @@ class Transaction(models.Model):
         ("sell", "فروش"),
     ]
 
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="transactions"
-    )
+    portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE, related_name="transactions")
 
     transaction_id = models.CharField(
         max_length=20,
@@ -57,7 +54,6 @@ class Transaction(models.Model):
         decimal_places=8
     )
 
-    # نسبت ریسک به ریواردی که برای معامله تعیین شده
     risk_reward = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -65,7 +61,6 @@ class Transaction(models.Model):
         blank=True
     )
 
-    # سود یا ضرر واقعی معامله
     profit_loss = models.DecimalField(
         max_digits=20,
         decimal_places=2,
@@ -77,7 +72,6 @@ class Transaction(models.Model):
         default=False
     )
 
-    # اگر این فیلد در پروژه‌ات استفاده می‌شود نگهش دار
     r_r = models.DecimalField(
         max_digits=10,
         decimal_places=2,

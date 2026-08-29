@@ -1,12 +1,15 @@
+from datetime import timedelta
+from django.utils import timezone
 from decimal import Decimal
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
+from app_portfolio.models import Portfolio
 from .serializers import (
     TransactionDashboardSerializer,
     BestTransactionDashboardSerializer,
 )
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from app_transaction.models import Transaction
 
 @extend_schema(tags=['Dashboard'])
@@ -152,4 +155,91 @@ def dashboard_summary(request):
             else None
         ),
         "transactions": transaction_serializer.data,
+    })
+
+@extend_schema(
+    tags=["Dashboard"],
+    parameters=[
+        OpenApiParameter(
+            name="portfolio_id",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the portfolio",
+        ),
+    ],
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def equity_chart(request):
+    portfolio_id = request.query_params.get("portfolio_id")
+    if not portfolio_id:
+        return Response(
+            {"detail": "portfolio_id is required."},
+            status=400
+        )
+
+    portfolio = Portfolio.objects.filter(
+        id=portfolio_id,
+        user=request.user
+    ).first()
+
+    if not portfolio:
+        return Response(
+            {"detail": "Portfolio not found."},
+            status=404
+        )
+
+    today = timezone.localdate()
+    start_date = today - timedelta(days=29)
+
+    transactions = Transaction.objects.filter(
+        portfolio=portfolio,
+        exit_price__isnull=False,
+        closed_at__isnull=False,
+        closed_at__date__gte=start_date,
+        closed_at__date__lte=today,
+    ).order_by("closed_at", "id")
+
+    daily_profit_loss = {}
+
+    for transaction in transactions:
+        transaction_date = transaction.closed_at.date()
+        daily_profit_loss.setdefault(
+            transaction_date,
+            Decimal("0")
+        )
+        daily_profit_loss[transaction_date] += (
+            transaction.profit_loss or Decimal("0")
+        )
+
+    total_profit_loss = sum(
+        daily_profit_loss.values(),
+        Decimal("0")
+    )
+
+    starting_equity = (
+        portfolio.balance - total_profit_loss
+    )
+
+    equity = starting_equity
+    data = []
+
+    for i in range(30):
+        current_date = start_date + timedelta(days=i)
+        equity += daily_profit_loss.get(
+            current_date,
+            Decimal("0")
+        )
+
+        data.append({
+            "date": current_date,
+            "equity": equity,
+        })
+
+    return Response({
+        "portfolio_id": portfolio.id,
+        "start_date": start_date,
+        "end_date": today,
+        "data": data,
     })

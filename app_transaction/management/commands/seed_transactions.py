@@ -1,29 +1,23 @@
-import random
 from decimal import Decimal
+from random import choice, randint, uniform
+
 from django.core.management.base import BaseCommand
-from app_journal.models import Transaction
-from app_user.models import User
+from django.utils import timezone
+
+from app_portfolio.models import Portfolio
+from app_transaction.models import Transaction
 
 
 class Command(BaseCommand):
-    help = "Create fake transactions"
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "count",
-            type=int,
-            nargs="?",
-            default=50,
-        )
+    help = "Create fake transactions for all portfolios"
 
     def handle(self, *args, **options):
-        count = options["count"]
 
-        user = User.objects.first()
+        portfolios = Portfolio.objects.all()
 
-        if not user:
+        if not portfolios.exists():
             self.stdout.write(
-                self.style.ERROR("No user found.")
+                self.style.ERROR("No portfolios found.")
             )
             return
 
@@ -33,76 +27,108 @@ class Command(BaseCommand):
             "USDJPY",
             "XAUUSD",
             "BTCUSD",
-            "US30",
-            "NAS100",
+            "ETHUSD",
         ]
 
-        transaction_types = [
-            "buy",
-            "sell",
-        ]
+        created_count = 0
 
-        created = 0
+        for portfolio in portfolios:
 
-        for _ in range(count):
+            # برای هر Portfolio بین 10 تا 20 معامله
+            transaction_count = randint(10, 20)
 
-            transaction_type = random.choice(transaction_types)
-            symbol = random.choice(symbols)
+            for _ in range(transaction_count):
 
-            entry_price = Decimal(
-                str(round(random.uniform(1, 3000), 5))
-            )
+                transaction_type = choice([
+                    "buy",
+                    "sell",
+                ])
 
-            exit_price = Decimal(
-                str(round(
-                    float(entry_price) *
-                    random.uniform(0.98, 1.02),
-                    5
-                ))
-            )
+                symbol = choice(symbols)
 
-            volume = Decimal(
-                str(random.choice([
-                    0.01,
-                    0.02,
-                    0.05,
-                    0.10,
-                    0.20,
-                    0.50,
-                    1.00,
-                ]))
-            )
+                entry_price = Decimal(
+                    str(round(uniform(1, 50000), 4))
+                )
 
-            profit_loss = Decimal(
-                str(round(
-                    random.uniform(-500, 1000),
-                    2
-                ))
-            )
+                # حدود 40٪ معاملات سودده
+                is_profit = choice([
+                    True,
+                    True,
+                    True,
+                    False,
+                    False,
+                ])
 
-            risk_reward = Decimal(
-                str(round(
-                    random.uniform(0.5, 5),
-                    2
-                ))
-            )
+                if is_profit:
 
-            transaction = Transaction.objects.create(
-                user=user,
-                symbol=symbol,
-                transaction_type=transaction_type,
-                entry_price=entry_price,
-                exit_price=exit_price,
-                volume=volume,
-                risk_reward=risk_reward,
-                profit_loss=profit_loss,
-                followed_plan=random.choice([True, False]),
-            )
+                    change = Decimal(
+                        str(round(uniform(0.01, 0.08), 4))
+                    )
 
-            created += 1
+                else:
+
+                    change = Decimal(
+                        str(round(uniform(0.01, 0.05), 4))
+                    )
+
+                if transaction_type == "buy":
+
+                    if is_profit:
+                        exit_price = entry_price * (
+                            Decimal("1") + change
+                        )
+                    else:
+                        exit_price = entry_price * (
+                            Decimal("1") - change
+                        )
+
+                else:
+
+                    if is_profit:
+                        exit_price = entry_price * (
+                            Decimal("1") - change
+                        )
+                    else:
+                        exit_price = entry_price * (
+                            Decimal("1") + change
+                        )
+
+                volume = Decimal(
+                    str(round(uniform(0.01, 2), 4))
+                )
+
+                transaction = Transaction(
+                    portfolio=portfolio,
+                    symbol=symbol,
+                    transaction_type=transaction_type,
+                    entry_price=entry_price,
+                    exit_price=exit_price,
+                    volume=volume,
+                    risk_reward=Decimal(
+                        str(round(uniform(1, 4), 2))
+                    ),
+                    followed_plan=choice([
+                        True,
+                        False,
+                    ]),
+                    r_r=Decimal(
+                        str(round(uniform(1, 4), 2))
+                    ),
+                    closed_at=timezone.now()
+                    - timezone.timedelta(
+                        days=randint(0, 29),
+                        hours=randint(0, 23),
+                        minutes=randint(0, 59),
+                    ),
+                )
+
+                # profit_loss داخل save() مدل محاسبه می‌شود
+                transaction.save()
+
+                created_count += 1
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"{created} fake transactions created successfully."
+                f"{created_count} fake transactions created successfully."
             )
         )
