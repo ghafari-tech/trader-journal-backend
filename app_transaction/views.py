@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from .models import Transaction
 
-@extend_schema(tags=['Transaction'], deprecated=True)
+@extend_schema(tags=['Transaction'])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
