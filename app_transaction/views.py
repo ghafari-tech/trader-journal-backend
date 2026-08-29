@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from .models import Transaction
+from app_portfolio.models import Portfolio
 
 @extend_schema(
     tags=["Transaction"],
@@ -28,8 +29,16 @@ def transaction_list(request):
             {"detail": "portfolio_id is required."},
             status=400
         )
+    
+    portfolio = Portfolio.objects.filter(id=portfolio_id).first()
+
+    if portfolio.user != request.user:
+        return Response({
+            "detail": "portfolio id unavailable for user"
+        }, status=403)
+
     transactions = Transaction.objects.filter(
-        user=request.user,
+        portfolio=portfolio,
     )
 
     serializer = TransactionSerializer(transactions, many=True)
