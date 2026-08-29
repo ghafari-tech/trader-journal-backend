@@ -34,12 +34,12 @@ def dashboard_summary(request):
     if transactions.exists():
         best_transaction = max(
             transactions,
-            key=lambda transaction: transaction.total_reward or Decimal("0")
+            key=lambda transaction: transaction.profit_loss or Decimal("0")
         )
 
         worst_transaction = min(
             transactions,
-            key=lambda transaction: transaction.total_reward or Decimal("0")
+            key=lambda transaction: transaction.profit_loss or Decimal("0")
         )
 
     best_transaction_serializer = (
