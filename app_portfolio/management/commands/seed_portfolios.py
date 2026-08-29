@@ -11,7 +11,6 @@ class Command(BaseCommand):
     help = "Create fake portfolios for all users"
 
     def handle(self, *args, **options):
-
         users = User.objects.all()
 
         if not users.exists():
