@@ -21,6 +21,13 @@ from .models import Transaction
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
+    portfolio_id = request.query_params.get("portfolio_id")
+
+    if not portfolio_id:
+        return Response(
+            {"detail": "portfolio_id is required."},
+            status=400
+        )
     transactions = Transaction.objects.filter(
         user=request.user,
     )
