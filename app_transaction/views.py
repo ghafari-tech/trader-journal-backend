@@ -6,7 +6,18 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 from .models import Transaction
 
-@extend_schema(tags=['Transaction'])
+@extend_schema(
+    tags=["Transaction"],
+    parameters=[
+        OpenApiParameter(
+            name="portfolio_id",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the portfolio",
+        ),
+    ],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
