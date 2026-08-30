@@ -112,6 +112,7 @@ class Subscription(models.Model):
     type = models.CharField(
         max_length=7,
         choices=SUBSCRIPTION_TYPE_CHOICES,
+        default=''
     )
     start_date = models.DateField(default=timezone.now)
-    end_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)

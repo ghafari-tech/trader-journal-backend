@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
-from app_user.models import User, EmailVerificationCode
+from app_user.models import User, EmailVerificationCode, Subscription
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -43,6 +43,8 @@ def register(request):
         email=email,
         password=password,
     )
+
+    Subscription.objects.create(user=user)
 
     return Response({
         "message": "User created successfully.",
