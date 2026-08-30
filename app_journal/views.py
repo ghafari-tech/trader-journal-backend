@@ -42,17 +42,18 @@ def add_journal(request):
         "revenge"
     ]
 
-    if not title or not transaction_id or not feel or not mistakes or not lesson_learned or not followed_plan:
+    if not title or not feel or not mistakes or not lesson_learned or not followed_plan:
         return JsonResponse({
             'success': False,
             'message': 'Please fill in all the required fields.'
         }, status=400)
 
     if not transaction_id.startswith('T-'):
-        return JsonResponse({
-            'success': False,
-            'message': 'Transaction ID must start with T-.'
-        }, status=400)
+        if transaction_id != "" or transaction_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Transaction ID must start with T-.'
+            }, status=400)
 
     if feel not in valid_feels:
         return JsonResponse({
@@ -60,16 +61,20 @@ def add_journal(request):
             'message': 'Feel free to choose one of the following.'
         }, status=400)
 
-    transaction = Transaction.objects.filter(transaction_id=transaction_id, user=request.user).first()
-    if not transaction:
-        return JsonResponse({
-            'success': False,
-            'message': 'Transaction does not exist.'
-        }, status=400)
+    if transaction_id:
+        transaction = Transaction.objects.filter(transaction_id=transaction_id, portfolio__user=request.user).first()
+        if not transaction:
+            return JsonResponse({
+                'success': False,
+                'message': 'Transaction does not exist.'
+            }, status=400)
+    else:
+        transaction = None
+
 
     journal = Journal.objects.create(
         user=request.user,
-        transaction = transaction,
+        transaction = transaction if transaction_id else None,
         title=title,
         feel=feel,
         mistakes=mistakes,
