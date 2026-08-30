@@ -5,24 +5,38 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from app_portfolio.models import Portfolio
+from app_portfolio.views import portfolio_edit
 from .serializers import (
     TransactionDashboardSerializer,
     BestTransactionDashboardSerializer,
 )
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from app_transaction.models import Transaction
+import jdatetime
+from decimal import Decimal
+
 
 @extend_schema(tags=['Dashboard'])
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def dashboard_summary(request):
-    transactions = Transaction.objects.filter(
+def summary(request):
+    portfolios = Portfolio.objects.filter(
         user=request.user,
+    )
+
+    if not portfolios.exists():
+        return Response(
+            {"detail": "portfolio not found."},
+            status=404
+        )
+
+    transactions = Transaction.objects.filter(
+        portfolio__in=portfolios,
         exit_price__isnull=False,
     ).order_by("closed_at", "id")
 
     transactions_view = Transaction.objects.filter(
-        user=request.user,
+        portfolio__in=portfolios,
         exit_price__isnull=False,
     ).order_by("closed_at", "id")[:8]
 
@@ -157,34 +171,15 @@ def dashboard_summary(request):
         "transactions": transaction_serializer.data,
     })
 
-@extend_schema(
-    tags=["Dashboard"],
-    parameters=[
-        OpenApiParameter(
-            name="portfolio_id",
-            type=int,
-            location=OpenApiParameter.QUERY,
-            required=True,
-            description="ID of the portfolio",
-        ),
-    ],
-)
+@extend_schema(tags=["Dashboard"])
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def equity_chart(request):
-    portfolio_id = request.query_params.get("portfolio_id")
-    if not portfolio_id:
-        return Response(
-            {"detail": "portfolio_id is required."},
-            status=400
-        )
-
-    portfolio = Portfolio.objects.filter(
-        id=portfolio_id,
+    portfolios = Portfolio.objects.filter(
         user=request.user
-    ).first()
+    )
 
-    if not portfolio:
+    if not portfolios.exists():
         return Response(
             {"detail": "Portfolio not found."},
             status=404
@@ -194,7 +189,7 @@ def equity_chart(request):
     start_date = today - timedelta(days=29)
 
     transactions = Transaction.objects.filter(
-        portfolio=portfolio,
+        portfolio__in=portfolios,
         exit_price__isnull=False,
         closed_at__isnull=False,
         closed_at__date__gte=start_date,
@@ -218,8 +213,12 @@ def equity_chart(request):
         Decimal("0")
     )
 
+    total_balance = 0
+    for portfolio in portfolios:
+        total_balance += portfolio.balance
+
     starting_equity = (
-        portfolio.balance - total_profit_loss
+        total_balance - total_profit_loss
     )
 
     equity = starting_equity
@@ -238,8 +237,186 @@ def equity_chart(request):
         })
 
     return Response({
-        "portfolio_id": portfolio.id,
         "start_date": start_date,
         "end_date": today,
         "data": data,
     })
+
+@extend_schema(tags=["Dashboard"])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def win_loss_rate(request):
+    portfolios = Portfolio.objects.filter(
+        user=request.user
+    )
+
+    if not portfolios.exists():
+        return Response(
+            {"detail": "Portfolio not found."},
+            status=404
+        )
+
+    transactions = Transaction.objects.filter(
+        portfolio__in=portfolios,
+        exit_price__isnull=False,
+    )
+
+    total_trades = transactions.count()
+
+    winning_trades = transactions.filter(
+        profit_loss__gt=0
+    ).count()
+
+    losing_trades = transactions.filter(
+        profit_loss__lt=0
+    ).count()
+
+    break_even_trades = transactions.filter(
+        profit_loss=0
+    ).count()
+
+    if total_trades == 0:
+        return Response({
+            "total_trades": 0,
+            "winning_trades": 0,
+            "losing_trades": 0,
+            "break_even_trades": 0,
+            "win_rate": 0,
+            "loss_rate": 0,
+        })
+
+    win_rate = (winning_trades / total_trades) * 100
+    loss_rate = (losing_trades / total_trades) * 100
+
+    return Response({
+        "total_trades": total_trades,
+        "winning_trades": winning_trades,
+        "losing_trades": losing_trades,
+        "break_even_trades": break_even_trades,
+        "win_rate": round(win_rate, 2),
+        "loss_rate": round(loss_rate, 2),
+    })
+
+@extend_schema(tags=["Dashboard"])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def monthly_performance(request):
+    months = [
+        "فروردین", "اردیبهشت", "خرداد",
+        "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر",
+        "دی", "بهمن", "اسفند",
+    ]
+
+    portfolios = Portfolio.objects.filter(
+        user=request.user
+    )
+
+    if not portfolios.exists():
+        return Response(
+            {"detail": "Portfolio not found."},
+            status=404
+        )
+
+    transactions = Transaction.objects.filter(
+        portfolio__in=portfolios,
+        exit_price__isnull=False,
+    )
+
+    now = timezone.localtime()
+    today_jalali = jdatetime.date.fromgregorian(
+        date=now.date()
+    )
+
+    current_year = today_jalali.year
+
+    result = []
+
+    for month in range(1, 13):
+        start_jalali = jdatetime.date(
+            current_year,
+            month,
+            1
+        )
+
+        if month == 12:
+            next_month_jalali = jdatetime.date(
+                current_year + 1,
+                1,
+                1
+            )
+        else:
+            next_month_jalali = jdatetime.date(
+                current_year,
+                month + 1,
+                1
+            )
+
+        start_date = start_jalali.togregorian()
+        next_month_date = next_month_jalali.togregorian()
+
+        monthly_transactions = transactions.filter(
+            closed_at__gte=start_date,
+            closed_at__lt=next_month_date,
+        )
+
+        profit = 0
+        loss = 0
+
+        for transaction in monthly_transactions:
+            if transaction.profit_loss > 0:
+                profit += transaction.profit_loss
+
+            elif transaction.profit_loss < 0:
+                loss += transaction.profit_loss
+
+        result.append({
+            "month": months[month - 1],
+            "month_number": month,
+            "profit": profit,
+            "loss": loss,
+            "net": profit + loss,
+        })
+
+    return Response({
+        "year": current_year,
+        "months": result,
+    })
+
+
+@extend_schema(tags=["Dashboard"])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def drawdown(request):
+    portfolios = Portfolio.objects.filter(
+        user=request.user
+    )
+
+    transactions = Transaction.objects.filter(
+        portfolio__in=portfolios,
+        exit_price__isnull=False,
+        profit_loss__isnull=False,
+    ).order_by("closed_at")
+
+    equity = Decimal("0")
+    peak = Decimal("0")
+
+    data = []
+
+    for transaction in transactions:
+        equity += transaction.profit_loss
+
+        if equity > peak:
+            peak = equity
+
+        if peak == 0:
+            dd = Decimal("0")
+        else:
+            dd = ((equity - peak) / peak) * 100
+
+        data.append({
+            "date": transaction.closed_at,
+            "dd": round(dd, 2),
+        })
+
+    return Response(data)
