@@ -61,7 +61,17 @@ class User(AbstractUser):
         ]
     )
 
+    status = models.CharField(
+        max_length=8,
+        choices=[
+            ('active', 'Active'),
+            ('inactive', 'Inactive'),
+        ],
+        default='active',
+    )
+
     email = models.EmailField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["phone"]
@@ -98,7 +108,7 @@ class Subscription(models.Model):
         ('pro', 'Pro'),
         ('pro max', 'ProMax')
     ]
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="subscription")
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="plan")
     type = models.CharField(
         max_length=7,
         choices=SUBSCRIPTION_TYPE_CHOICES,

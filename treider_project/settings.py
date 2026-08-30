@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'app_notification',
     'app_riskmanage',
     'corsheaders',
-    'app_portfolio'
+    'app_portfolio',
+    'app_admin',
 ]
 
 MIDDLEWARE = [
@@ -167,3 +168,4 @@ EMAIL_HOST_PASSWORD = "your_app_password"
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+ADMIN_EMAIL = "user@example.com"
