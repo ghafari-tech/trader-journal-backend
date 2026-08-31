@@ -6,7 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import *
 
 
-@extend_schema(tags=['User Info'])
+@extend_schema(tags=['Settings'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_info(request):
+    serializer = UserInfoSerializer(request.user)
+    return Response(serializer.data)
+
+@extend_schema(tags=['Settings'])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_plan_info(request):
