@@ -28,11 +28,29 @@ def journal_list(request):
 @permission_classes([IsAuthenticated])
 def add_journal(request):
     title = request.data.get('title')
-    transaction_id = request.data.get('transaction_id')
+    transaction_id = request.data.get('transaction_id', None)
     feel = request.data.get('feel')
     mistakes = request.data.get('mistakes')
     lesson_learned = request.data.get('lesson_learned')
     followed_plan = request.data.get('followed_plan')
+
+    if transaction_id:
+        if not transaction_id.startswith('T-'):
+            return JsonResponse({
+                'success': False,
+                'message': 'Transaction ID must start with T-.',
+                'transaction_id': transaction_id
+            }, status=400)
+
+        transaction = Transaction.objects.filter(transaction_id=transaction_id, portfolio__user=request.user).first()
+        if not transaction:
+            return JsonResponse({
+                'success': False,
+                'message': 'Transaction does not exist.'
+            }, status=400)
+    else:
+        transaction = None
+
 
     valid_feels = [
         "comfort",
@@ -48,28 +66,12 @@ def add_journal(request):
             'message': 'Please fill in all the required fields.'
         }, status=400)
 
-    if not transaction_id.startswith('T-'):
-        if transaction_id != "" or transaction_id:
-            return JsonResponse({
-                'success': False,
-                'message': 'Transaction ID must start with T-.'
-            }, status=400)
 
     if feel not in valid_feels:
         return JsonResponse({
             'success': False,
             'message': 'Feel free to choose one of the following.'
         }, status=400)
-
-    if transaction_id:
-        transaction = Transaction.objects.filter(transaction_id=transaction_id, portfolio__user=request.user).first()
-        if not transaction:
-            return JsonResponse({
-                'success': False,
-                'message': 'Transaction does not exist.'
-            }, status=400)
-    else:
-        transaction = None
 
 
     journal = Journal.objects.create(
