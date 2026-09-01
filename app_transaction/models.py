@@ -1,14 +1,32 @@
 from decimal import Decimal
-
+import secrets
 from django.db import models
 from django.core.validators import RegexValidator
-
 from app_portfolio.models import Portfolio
 from app_user.models import User
 
 
-class Transaction(models.Model):
+def generate_api_key():
+    return secrets.token_hex(32)
 
+
+class MetaTraderAccount(models.Model):
+    PLATFORM_CHOICES = [
+        ('mt4', 'MetaTrader 4'),
+        ('mt5', 'MetaTrader 5'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='mt_account')
+    platform = models.CharField(max_length=3, choices=PLATFORM_CHOICES, blank=True)
+    server = models.CharField(max_length=100, blank=True)
+    account_number = models.CharField(max_length=50, blank=True)
+    investor_password_encrypted = models.TextField(blank=True)
+    is_connected = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class Transaction(models.Model):
     TYPE_CHOICES = [
         ("buy", "خرید"),
         ("sell", "فروش"),
@@ -27,6 +45,8 @@ class Transaction(models.Model):
             )
         ],
     )
+
+    mt_ticket = models.CharField(max_length=50, null=True, blank=True, unique=True)
 
     symbol = models.CharField(
         max_length=20
@@ -72,12 +92,7 @@ class Transaction(models.Model):
         default=False
     )
 
-    r_r = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=False,
-        blank=False
-    )
+    r_r = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     created_at = models.DateTimeField(
         auto_now_add=True
@@ -89,8 +104,6 @@ class Transaction(models.Model):
     )
 
     def save(self, *args, **kwargs):
-
-        # ساخت Transaction ID
         if not self.transaction_id:
             last_transaction = (
                 Transaction.objects

@@ -10,7 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -169,3 +171,7 @@ EMAIL_HOST_PASSWORD = "your_app_password"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 ADMIN_EMAIL = "user@example.com"
+
+MT_INVESTOR_PASSWORD_KEY = config('MT_INVESTOR_PASSWORD_KEY')
+MT5_SERVICE_URL = config('MT5_SERVICE_URL')
+MT5_INTERNAL_SECRET = config('MT5_INTERNAL_SECRET')

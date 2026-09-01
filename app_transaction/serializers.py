@@ -7,17 +7,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = '__all__'
 
-#=================================|
-#============DASHBOARD============|
-#=================================\/
-
-class TransactionDashboardSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Transaction
-        fields = ['symbol', 'transaction_type', 'volume', 'r_r', 'total_reward', 'created_at']
-
-
-class BestTransactionDashboardSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Transaction
-        fields = ['symbol', 'total_reward', 'r_r', 'created_at']
+class MT5VerifyInternalSerializer(serializers.Serializer):
+    account_number = serializers.CharField(max_length=50)
+    investor_password = serializers.CharField(max_length=255)
+    server = serializers.CharField(max_length=100)
