@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema
 from app_transaction.authentication import MetaTraderApiKeyAuthentication
 from .serializers import *
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
