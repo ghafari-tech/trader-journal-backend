@@ -17,10 +17,10 @@ class MetaTraderAccount(models.Model):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='mt_account')
+    api_key = models.CharField(max_length=64, unique=True, default=generate_api_key)
     platform = models.CharField(max_length=3, choices=PLATFORM_CHOICES, blank=True)
     server = models.CharField(max_length=100, blank=True)
     account_number = models.CharField(max_length=50, blank=True)
-    investor_password_encrypted = models.TextField(blank=True)
     is_connected = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

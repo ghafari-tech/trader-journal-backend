@@ -29,4 +29,3 @@ class MetaTraderConnectSerializer(serializers.Serializer):
     platform = serializers.ChoiceField(choices=['mt4', 'mt5'])
     server = serializers.CharField(max_length=100)
     account_number = serializers.CharField(max_length=50)
-    investor_password = serializers.CharField(max_length=255, write_only=True)

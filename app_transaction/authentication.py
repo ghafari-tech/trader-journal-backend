@@ -9,9 +9,7 @@ class MetaTraderApiKeyAuthentication(BaseAuthentication):
         if not api_key:
             return None
         try:
-            account = MetaTraderAccount.objects.select_related('portfolio').get(
-                api_key=api_key, is_active=True
-            )
+            account = MetaTraderAccount.objects.get(api_key=api_key)
         except MetaTraderAccount.DoesNotExist:
             raise AuthenticationFailed('کلید API نامعتبر است')
         return (account.user, account)
