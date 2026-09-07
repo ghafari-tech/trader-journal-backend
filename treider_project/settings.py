@@ -183,3 +183,13 @@ SIMPLE_JWT = {
 
     'ROTATE_REFRESH_TOKENS': False,
 }
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Trader API",
+    "DESCRIPTION": "API Documentation",
+    "VERSION": "1.0.0",
+
+    "TAGS": [
+        {"name": "Authentication"},
+    ],
+}
