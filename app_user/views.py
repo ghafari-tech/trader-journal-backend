@@ -1,26 +1,11 @@
 from django.contrib.auth import authenticate
-from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
-from app_user.models import User, EmailVerificationCode, Subscription
+from app_user.models import User
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from .serializers import *
-
-
-def user_view(request):
-    user = request.user
-    return JsonResponse({
-        "image_profile": user.image_profile,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "email": user.email,
-        "phone": user.phone
-    })
-
-def change_profile(request):
-    pass
 
 @extend_schema(request=RegisterSerializer, tags=['Authentication'])
 @api_view(['POST'])

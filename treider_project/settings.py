@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -175,3 +176,10 @@ ADMIN_EMAIL = "user@example.com"
 MT_INVESTOR_PASSWORD_KEY = config('MT_INVESTOR_PASSWORD_KEY')
 MT5_SERVICE_URL = config('MT5_SERVICE_URL')
 MT5_INTERNAL_SECRET = config('MT5_INTERNAL_SECRET')
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=365),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=36500),
+
+    'ROTATE_REFRESH_TOKENS': False,
+}

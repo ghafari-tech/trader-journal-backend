@@ -36,7 +36,7 @@ def user_plan_info(request):
 @authentication_classes([MetaTraderApiKeyAuthentication])
 @permission_classes([IsAuthenticated])
 def metatrader_connect(request):
-    account = request.auth  # از api_key پیدا شده
+    account = request.auth
 
     serializer = MetaTraderConnectSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -61,5 +61,5 @@ def metatrader_status(request):
         'platform': account.platform,
         'server': account.server,
         'account_number': account.account_number,
-        'api_key': account.api_key,  # کاربر این رو کپی می‌کنه توی اکسپرت
+        'api_key': account.api_key,
     }, status=200)
