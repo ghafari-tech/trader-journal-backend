@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from app_user.models import User
 
 
@@ -23,31 +23,58 @@ class Portfolio(models.Model):
         on_delete=models.CASCADE,
         related_name='portfolios'
     )
+
     name = models.CharField(max_length=100)
     broker = models.CharField(max_length=100)
+
     balance = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         default=0
     )
+
     profit_loss = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         default=0
     )
+
     transactions_count = models.PositiveIntegerField(default=0)
-    leverage = models.CharField(default='1:1', choices=LEVERAGE_CHOICES, max_length=10)
-    currency = models.CharField(max_length=10, default='USD', choices=CURRENCY_CHOICES)
+
+    leverage = models.CharField(
+        default='1:1',
+        choices=LEVERAGE_CHOICES,
+        max_length=10
+    )
+
+    currency = models.CharField(
+        max_length=10,
+        default='USD',
+        choices=CURRENCY_CHOICES
+    )
+
     profit_percentage = models.DecimalField(
         max_digits=7,
         decimal_places=2,
         default=0
     )
-    is_active = models.BooleanField(default=True)
+
+    is_active = models.BooleanField(default=False)
     is_archived = models.BooleanField(default=False)
     mt_connection = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            Portfolio.objects.filter(
+                user=self.user,
+                is_active=True
+            ).exclude(
+                pk=self.pk
+            ).update(is_active=False)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
