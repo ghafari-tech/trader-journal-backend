@@ -18,6 +18,16 @@ def portfolio_list(request):
         'portfolios': serializer.data
     }, status=200)
 
+@extend_schema(tags=['Portfolio'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def portfolio_archive_list(request):
+    portfolios = Portfolio.objects.filter(user=request.user, is_archived=True)
+    serializer = PortfolioSerializer(portfolios, many=True)
+    return Response({
+        'portfolios': serializer.data
+    }, status=200)
+
 @extend_schema(
     tags=['Portfolio'],
     request=AddPortfolioSerializer
