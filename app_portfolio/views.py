@@ -114,3 +114,15 @@ def portfolio_archive(request, pk):
     return Response({
         'message': 'Portfolio archived successfully'
     }, status=200)
+
+@extend_schema(tags=['Portfolio'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def active_portfolio(request, pk):
+    portfolio = get_object_or_404(Portfolio, pk=pk, user=request.user)
+
+    portfolio.is_active = True
+    portfolio.save()
+    return Response({
+        'message': 'Portfolio active successfully',
+    }, status=201)
