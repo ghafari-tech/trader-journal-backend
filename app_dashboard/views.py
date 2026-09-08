@@ -25,7 +25,7 @@ def summary(request):
         is_active=True
     ).first()
 
-    if not portfolio.exists():
+    if not portfolio:
         return Response(
             {"detail": "portfolio not found."},
             status=404
@@ -181,7 +181,7 @@ def equity_chart(request):
         is_active=True
     ).first()
 
-    if not portfolio.exists():
+    if not portfolio:
         return Response(
             {"detail": "Portfolio not found."},
             status=404
@@ -251,7 +251,7 @@ def win_loss_rate(request):
         is_active=True
     ).first()
 
-    if not portfolio.exists():
+    if not portfolio:
         return Response(
             {"detail": "Portfolio not found."},
             status=404
@@ -314,7 +314,7 @@ def monthly_performance(request):
         is_active=True
     ).first()
 
-    if not portfolio.exists():
+    if not portfolio:
         return Response(
             {"detail": "Portfolio not found."},
             status=404
@@ -394,6 +394,11 @@ def drawdown(request):
         user=request.user,
         is_active=True
     ).first()
+
+    if not portfolio:
+        return Response({
+            "detail": "Portfolio not found.",
+        }, status=404)
 
     transactions = Transaction.objects.filter(
         portfolio=portfolio,
