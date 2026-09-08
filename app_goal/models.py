@@ -1,8 +1,8 @@
+from app_portfolio.models import Portfolio
 from app_user.models import User
 from django.db import models
 
 class Goal(models.Model):
-
     TYPE_CHOICES = [
         ("profit", "سود"),
         ("risk", "ریسک"),
@@ -10,11 +10,7 @@ class Goal(models.Model):
         ("learning", "یادگیری")
     ]
 
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="goals",
-    )
+    portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     target_type = models.CharField(
         max_length=8,

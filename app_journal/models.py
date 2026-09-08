@@ -1,4 +1,5 @@
 from django.db import models
+from app_portfolio.models import Portfolio
 from app_transaction.models import Transaction
 from app_user.models import User
 
@@ -12,7 +13,7 @@ class Journal(models.Model):
         ("revenge", "انتقام")
     ]
     transaction = models.ForeignKey(Transaction, on_delete=models.SET_NULL, related_name='journals', null=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='journals', null=True)
+    portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE, related_name='journals', null=True)
     title = models.CharField(max_length=100)
     feel = models.CharField(
         max_length=20,

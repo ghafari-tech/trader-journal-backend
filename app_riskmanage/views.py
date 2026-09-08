@@ -2,14 +2,21 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+from app_portfolio.models import Portfolio
 from .serializers import *
 
 @extend_schema(tags=['Risk Management'])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def risk_management_show(request):
-    risk_manage, created = RiskManagement.objects.get_or_create(
+    portfolio = Portfolio.objects.filter(
         user=request.user,
+        is_active=True
+    ).first()
+
+    risk_manage, created = RiskManagement.objects.get_or_create(
+        portfolio=portfolio,
     )
 
     serializer = RiskManageSerializer(risk_manage)
@@ -28,8 +35,13 @@ def edit_risk_management(request):
     max_transaction_daily = request.data.get('max_transaction_daily')
     max_consecutive_loss = request.data.get('max_consecutive_loss')
 
-    risk_manage, created = RiskManagement.objects.get_or_create(
+    portfolio = Portfolio.objects.filter(
         user=request.user,
+        is_active=True
+    ).first()
+
+    risk_manage, created = RiskManagement.objects.get_or_create(
+        portfolio=portfolio,
     )
 
     if max_risk != risk_manage.max_risk:

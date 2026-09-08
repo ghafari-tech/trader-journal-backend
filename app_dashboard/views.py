@@ -20,23 +20,24 @@ from decimal import Decimal
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def summary(request):
-    portfolios = Portfolio.objects.filter(
+    portfolio = Portfolio.objects.filter(
         user=request.user,
-    )
+        is_active=True
+    ).first()
 
-    if not portfolios.exists():
+    if not portfolio.exists():
         return Response(
             {"detail": "portfolio not found."},
             status=404
         )
 
     transactions = Transaction.objects.filter(
-        portfolio__in=portfolios,
+        portfolio=portfolio,
         exit_price__isnull=False,
     ).order_by("closed_at", "id")
 
     transactions_view = Transaction.objects.filter(
-        portfolio__in=portfolios,
+        portfolio=portfolio,
         exit_price__isnull=False,
     ).order_by("closed_at", "id")[:8]
 
@@ -175,11 +176,12 @@ def summary(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def equity_chart(request):
-    portfolios = Portfolio.objects.filter(
-        user=request.user
-    )
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
 
-    if not portfolios.exists():
+    if not portfolio.exists():
         return Response(
             {"detail": "Portfolio not found."},
             status=404
@@ -189,7 +191,7 @@ def equity_chart(request):
     start_date = today - timedelta(days=29)
 
     transactions = Transaction.objects.filter(
-        portfolio__in=portfolios,
+        portfolio=portfolio,
         exit_price__isnull=False,
         closed_at__isnull=False,
         closed_at__date__gte=start_date,
@@ -213,9 +215,7 @@ def equity_chart(request):
         Decimal("0")
     )
 
-    total_balance = 0
-    for portfolio in portfolios:
-        total_balance += portfolio.balance
+    total_balance = portfolio.balance
 
     starting_equity = (
         total_balance - total_profit_loss
@@ -246,18 +246,19 @@ def equity_chart(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def win_loss_rate(request):
-    portfolios = Portfolio.objects.filter(
-        user=request.user
-    )
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
 
-    if not portfolios.exists():
+    if not portfolio.exists():
         return Response(
             {"detail": "Portfolio not found."},
             status=404
         )
 
     transactions = Transaction.objects.filter(
-        portfolio__in=portfolios,
+        portfolio=portfolio,
         exit_price__isnull=False,
     )
 
@@ -308,18 +309,19 @@ def monthly_performance(request):
         "دی", "بهمن", "اسفند",
     ]
 
-    portfolios = Portfolio.objects.filter(
-        user=request.user
-    )
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
 
-    if not portfolios.exists():
+    if not portfolio.exists():
         return Response(
             {"detail": "Portfolio not found."},
             status=404
         )
 
     transactions = Transaction.objects.filter(
-        portfolio__in=portfolios,
+        portfolio=portfolio,
         exit_price__isnull=False,
     )
 
@@ -388,12 +390,13 @@ def monthly_performance(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def drawdown(request):
-    portfolios = Portfolio.objects.filter(
-        user=request.user
-    )
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
 
     transactions = Transaction.objects.filter(
-        portfolio__in=portfolios,
+        portfolio=portfolio,
         exit_price__isnull=False,
         profit_loss__isnull=False,
     ).order_by("closed_at")

@@ -1,7 +1,6 @@
 import jdatetime
 from datetime import datetime, time
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-
 from app_portfolio.views import portfolio_archive
 from .serializers import *
 from .models import Transaction
@@ -15,35 +14,16 @@ from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from rest_framework.response import Response
 
-@extend_schema(
-    tags=["Transaction"],
-    parameters=[
-        OpenApiParameter(
-            name="portfolio_id",
-            type=int,
-            location=OpenApiParameter.QUERY,
-            required=True,
-            description="ID of the portfolio",
-        ),
-    ],
-)
+@extend_schema(tags=["Transaction"])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
-    portfolio_id = request.query_params.get("portfolio_id")
+    portfolio = Portfolio.objects.filter(user=request.user, is_active=True).first()
 
-    if not portfolio_id:
-        return Response(
-            {"detail": "portfolio_id is required."},
-            status=400
-        )
-    
-    portfolio = Portfolio.objects.filter(id=portfolio_id).first()
-
-    if portfolio.user != request.user:
+    if not portfolio:
         return Response({
-            "detail": "portfolio id unavailable for user"
-        }, status=403)
+            'detail': 'No portfolio found',
+        }, status=404)
 
     transactions = Transaction.objects.filter(
         portfolio=portfolio,

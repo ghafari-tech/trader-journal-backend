@@ -1,4 +1,6 @@
 from drf_spectacular.utils import extend_schema
+
+from app_portfolio.models import Portfolio
 from app_transaction.authentication import MetaTraderApiKeyAuthentication
 from .serializers import *
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -55,7 +57,12 @@ def metatrader_connect(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def metatrader_status(request):
-    account, _ = MetaTraderAccount.objects.get_or_create(user=request.user)
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
+
+    account, _ = MetaTraderAccount.objects.get_or_create(portfolio=portfolio)
     return Response({
         'connected': account.is_connected,
         'platform': account.platform,

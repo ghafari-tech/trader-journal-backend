@@ -1,7 +1,8 @@
 from django.contrib.auth import authenticate
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
-
+from app_portfolio.models import Portfolio
+from app_portfolio.views import portfolio_archive_list
 from app_transaction.models import Transaction
 from app_user.models import User
 from rest_framework.decorators import api_view, permission_classes
@@ -15,7 +16,11 @@ from .serializers import *
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def journal_list(request):
-    journals = Journal.objects.filter(user=request.user)
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
+    journals = Journal.objects.filter(portfolio=portfolio)
 
     serializer = JournalSerializer(journals, many=True)
 
@@ -33,6 +38,11 @@ def add_journal(request):
     mistakes = request.data.get('mistakes')
     lesson_learned = request.data.get('lesson_learned')
     followed_plan = request.data.get('followed_plan')
+
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
 
     if transaction_id:
         if not transaction_id.startswith('T-'):
@@ -75,8 +85,8 @@ def add_journal(request):
 
 
     journal = Journal.objects.create(
-        user=request.user,
         transaction = transaction if transaction_id else None,
+        portfolio=portfolio,
         title=title,
         feel=feel,
         mistakes=mistakes,

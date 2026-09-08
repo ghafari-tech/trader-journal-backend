@@ -1,10 +1,10 @@
 from django.db import models
-
+from app_portfolio.models import Portfolio
 from app_user.models import User
 
 
 class RiskManagement(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='riskmanages')
+    portfolio = models.OneToOneField(Portfolio, on_delete=models.CASCADE)
     max_risk = models.IntegerField(default=0)
     max_loss_daily = models.IntegerField(default=0)
     max_loss_weekly = models.IntegerField(default=0)

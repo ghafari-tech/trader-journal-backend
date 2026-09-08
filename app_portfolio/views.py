@@ -45,6 +45,9 @@ def portfolio_create(request):
 
     portfolio = serializer.save(user=request.user)
 
+    if not Portfolio.objects.filter(user=request.user, is_active=True).exists():
+        portfolio.is_active = True
+
     return Response({
         'message': 'Portfolio created successfully',
         'portfolio': AddPortfolioSerializer(portfolio).data
@@ -94,6 +97,11 @@ def portfolio_delete(request, pk):
 
     portfolio.delete()
 
+    if portfolio.is_active:
+        porto = Portfolio.objects.filter(user=request.user, is_archived=False).order_by('created_at').first()
+        porto.is_active = True
+        porto.save()
+
     return Response({
         'message': 'Portfolio deleted successfully'
     }, status=200)
@@ -110,6 +118,11 @@ def portfolio_archive(request, pk):
 
     portfolio.is_archived = True
     portfolio.save(update_fields=['is_archived'])
+
+    if portfolio.is_active:
+        porto = Portfolio.objects.filter(user=request.user, is_archived=True).order_by('created_at').first()
+        porto.is_active = True
+        porto.save()
 
     return Response({
         'message': 'Portfolio archived successfully'

@@ -16,7 +16,7 @@ class MetaTraderAccount(models.Model):
         ('mt5', 'MetaTrader 5'),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='mt_account')
+    portfolio = models.OneToOneField(Portfolio, on_delete=models.CASCADE, related_name='mt_account')
     api_key = models.CharField(max_length=64, unique=True, default=generate_api_key)
     platform = models.CharField(max_length=3, choices=PLATFORM_CHOICES, blank=True)
     server = models.CharField(max_length=100, blank=True)

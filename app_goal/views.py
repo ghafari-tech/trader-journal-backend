@@ -1,3 +1,5 @@
+from app_portfolio.models import Portfolio
+from app_portfolio.views import portfolio_archive
 from .serializers import *
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
@@ -10,7 +12,11 @@ from django.shortcuts import get_object_or_404
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def goal_list(request):
-    goals = Goal.objects.filter(user=request.user)
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True,
+    ).first()
+    goals = Goal.objects.filter(portfolio=portfolio)
 
     serializer = GoalSerializer(goals, many=True)
 
@@ -26,6 +32,11 @@ def add_goal(request):
     target_type = request.data.get('target_type')
     target_value = request.data.get('target_value')
     deadline = request.data.get('deadline')
+
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
 
     valid_type = [
         "profit",
@@ -46,7 +57,7 @@ def add_goal(request):
         }, status=400)
 
     goal = Goal.objects.create(
-        user=request.user,
+        portfolio=portfolio,
         title=title,
         target_type=target_type,
         target_value=target_value,
