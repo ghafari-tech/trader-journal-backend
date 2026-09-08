@@ -1,3 +1,5 @@
+from cffi.model import pointer_cache
+
 from .serializers import *
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
@@ -138,4 +140,24 @@ def active_portfolio(request, pk):
     portfolio.save()
     return Response({
         'message': 'Portfolio active successfully',
+    }, status=201)
+
+def archive_out_portfolio(request, pk):
+    portfolio = get_object_or_404(Portfolio, pk=pk, user=request.user)
+
+    if not portfolio:
+        return Response({
+            'message': 'Portfolio does not exist',
+        }, status=404)
+
+    if not portfolio.is_archived:
+        return Response({
+            'message': 'Portfolio not archive',
+        }, status=403)
+
+    portfolio.is_archived = False
+    portfolio.save()
+
+    return Response({
+        'message': 'Portfolio archived successfully',
     }, status=201)
