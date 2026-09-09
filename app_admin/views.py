@@ -3,18 +3,14 @@ from .serializers import *
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from app_user.models import User, Subscription
 
 
 @extend_schema(tags=['Admin'])
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def users_list(request):
-    if request.user.email != settings.ADMIN_EMAIL:
-        return Response({
-            'message': 'you are not allowed to access this endpoint',
-        }, status=403)
     users = User.objects.all()
 
     for user in users:
