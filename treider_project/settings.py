@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'app_portfolio',
     'app_admin',
+    'app_badge',
 ]
 
 MIDDLEWARE = [

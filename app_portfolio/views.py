@@ -1,5 +1,3 @@
-from cffi.model import pointer_cache
-
 from .serializers import *
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes

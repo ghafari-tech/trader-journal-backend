@@ -36,6 +36,7 @@ urlpatterns = [
     path('app/dashboard/', include('app_dashboard.urls')),
     path('app/admin/', include('app_admin.urls')),
     path('app/settings/', include('app_setting.urls')),
+    path('app/achievements/', include('app_badge.urls')),
     # path("verfy/", verify, name="send-email"),
     path(
         'api/schema/',
