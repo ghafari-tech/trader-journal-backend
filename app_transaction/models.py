@@ -4,26 +4,65 @@ from django.db import models
 from django.core.validators import RegexValidator
 from app_portfolio.models import Portfolio
 from app_user.models import User
-
+from django.utils import timezone
 
 def generate_api_key():
     return secrets.token_hex(32)
 
 
 class MetaTraderAccount(models.Model):
-    PLATFORM_CHOICES = [
-        ('mt4', 'MetaTrader 4'),
-        ('mt5', 'MetaTrader 5'),
-    ]
+    portfolio = models.ForeignKey(
+        Portfolio,
+        on_delete=models.CASCADE,
+        related_name="mt_accounts"
+    )
 
-    portfolio = models.OneToOneField(Portfolio, on_delete=models.CASCADE, related_name='mt_account')
-    api_key = models.CharField(max_length=64, unique=True, default=generate_api_key)
-    platform = models.CharField(max_length=3, choices=PLATFORM_CHOICES, blank=True)
-    server = models.CharField(max_length=100, blank=True)
-    account_number = models.CharField(max_length=50, blank=True)
-    is_connected = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    api_key = models.CharField(
+        max_length=100,
+        unique=True,
+        editable=False
+    )
+
+    platform = models.CharField(
+        max_length=10,
+        default="mt5"
+    )
+
+    account_number = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    server = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+
+    last_seen = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.api_key:
+            self.api_key = secrets.token_urlsafe(32)
+
+        super().save(*args, **kwargs)
+
+    @property
+    def connected(self):
+        if not self.last_seen:
+            return False
+
+        return (
+            timezone.now() - self.last_seen
+        ).total_seconds() < 60
 
 
 class Transaction(models.Model):
@@ -46,7 +85,11 @@ class Transaction(models.Model):
         ],
     )
 
-    mt_ticket = models.CharField(max_length=50, null=True, blank=True, unique=True)
+    mt_ticket = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
 
     symbol = models.CharField(
         max_length=20
@@ -72,6 +115,20 @@ class Transaction(models.Model):
     volume = models.DecimalField(
         max_digits=20,
         decimal_places=8
+    )
+
+    stop_loss = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        null=True,
+        blank=True
+    )
+
+    take_profit = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        null=True,
+        blank=True
     )
 
     risk_reward = models.DecimalField(
