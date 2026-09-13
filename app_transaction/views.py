@@ -9,11 +9,19 @@ from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from rest_framework.response import Response
 
+from .pagination import TransactionPagination
+
+
 @extend_schema(tags=["Transaction"])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
-    portfolio = Portfolio.objects.filter(user=request.user, is_active=True).first()
+
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
+
     if not portfolio:
         return Response({
             'detail': 'No portfolio found',
@@ -21,13 +29,23 @@ def transaction_list(request):
 
     transactions = Transaction.objects.filter(
         portfolio=portfolio,
+    ).order_by('-created_at')
+
+    paginator = TransactionPagination()
+
+    paginated_transactions = paginator.paginate_queryset(
+        transactions,
+        request
     )
 
-    serializer = TransactionSerializer(transactions, many=True)
+    serializer = TransactionSerializer(
+        paginated_transactions,
+        many=True
+    )
 
-    return Response({
-        'transactions': serializer.data,
-    }, status=200)
+    return paginator.get_paginated_response({
+        "transactions": serializer.data
+    })
 
 
 @extend_schema(tags=["Transaction"])
