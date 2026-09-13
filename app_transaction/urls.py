@@ -5,5 +5,5 @@ app_name = 'transaction'
 
 urlpatterns = [
     path('', views.transaction_list, name='transaction_list'),
-    path('calendar/', views.transaction_calendar, name='transaction_calendar'),
+    path('trades/calendar/<int:year>/<int:month>/', views.transaction_calendar, name='transaction_calendar'),
 ]

@@ -14,7 +14,6 @@ from rest_framework.response import Response
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
     portfolio = Portfolio.objects.filter(user=request.user, is_active=True).first()
-
     if not portfolio:
         return Response({
             'detail': 'No portfolio found',
@@ -34,28 +33,40 @@ def transaction_list(request):
 @extend_schema(tags=["Transaction"])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def transaction_calendar(request):
-    today = jdatetime.date.today()
-    first_day_jalali = jdatetime.date(
-        today.year,
-        today.month,
-        1
-    )
-    if today.month == 12:
+def transaction_calendar(request, year, month):
+    try:
+        if not 1 <= month <= 12:
+            return Response(
+                {"detail": "ماه باید بین 1 تا 12 باشد."},
+                status=400
+            )
+
+        first_day_jalali = jdatetime.date(
+            year,
+            month,
+            1
+        )
+
+    except (ValueError, TypeError):
+        return Response(
+            {"detail": "سال یا ماه نامعتبر است."},
+            status=400
+        )
+
+    if month == 12:
         next_month_jalali = jdatetime.date(
-            today.year + 1,
+            year + 1,
             1,
             1
         )
     else:
         next_month_jalali = jdatetime.date(
-            today.year,
-            today.month + 1,
+            year,
+            month + 1,
             1
         )
 
-
-
+    # تبدیل بازه شمسی به میلادی
     first_day_gregorian = first_day_jalali.togregorian()
     next_month_gregorian = next_month_jalali.togregorian()
 
@@ -64,7 +75,7 @@ def transaction_calendar(request):
         is_active=True,
     ).first()
 
-    transactions = (
+    transactions = list(
         Transaction.objects
         .filter(
             portfolio=portfolio,
@@ -87,22 +98,20 @@ def transaction_calendar(request):
         for item in transactions
     }
 
-    data = []
-
-    current_day = first_day_jalali
-
     total_month = sum(
         item["profit_loss"] or 0
         for item in transactions
     )
 
     profitable_days = sum(
-        1 for item in transactions
+        1
+        for item in transactions
         if (item["profit_loss"] or 0) > 0
     )
 
     loss_days = sum(
-        1 for item in transactions
+        1
+        for item in transactions
         if (item["profit_loss"] or 0) < 0
     )
 
@@ -112,9 +121,11 @@ def transaction_calendar(request):
         default=None
     )
 
+    data = []
+
+    current_day = first_day_jalali
     while current_day < next_month_jalali:
         gregorian_day = current_day.togregorian()
-
         transaction_data = transactions_by_day.get(
             gregorian_day
         )
@@ -127,7 +138,8 @@ def transaction_calendar(request):
             ),
             "profit_loss": (
                 float(transaction_data["profit_loss"])
-                if transaction_data and transaction_data["profit_loss"] is not None
+                if transaction_data
+                and transaction_data["profit_loss"] is not None
                 else 0
             )
         })
@@ -135,9 +147,14 @@ def transaction_calendar(request):
         current_day += jdatetime.timedelta(days=1)
 
     return Response({
-        "total_month": total_month,
+        "year": year,
+        "month": month,
+        "total_month": float(total_month),
         "profitable_days": profitable_days,
         "loss_days": loss_days,
-        "best_day": best_day["profit_loss"] if best_day else 0,
+        "best_day": (
+            float(best_day["profit_loss"])
+            if best_day else 0
+        ),
         "calendar": data
     })
