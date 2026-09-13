@@ -122,7 +122,7 @@ def metatrader_sync_transactions(request):
 
         for item in transactions:
 
-            ticket = str(item.get('ticket', '')).strip()
+            ticket = str(item.get('mt_ticket', '')).strip()
 
             if not ticket:
                 continue
@@ -240,7 +240,7 @@ def download_ea(request):
         'app_transaction',
         'static',
         'ea',
-        'TradeJournalEA.mp5'
+        'TradeJournalEA.ex5'
     )
 
     if not os.path.exists(file_path):
@@ -249,10 +249,8 @@ def download_ea(request):
             status=404
         )
 
-    response = FileResponse(
+    return FileResponse(
         open(file_path, 'rb'),
         as_attachment=True,
-        filename='TradeJournalEA.mp5'
+        filename='TradeJournalEA.ex5'
     )
-
-    return response

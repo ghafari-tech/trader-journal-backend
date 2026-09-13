@@ -1,48 +1,43 @@
-from decimal import Decimal
-from random import choice, randint, uniform
+import random
 
 from django.core.management.base import BaseCommand
 
-from app_portfolio.models import Portfolio
 from app_user.models import User
+from app_portfolio.models import Portfolio
 
 
 class Command(BaseCommand):
-    help = "Create fake portfolios for all users"
+    help = "Seed portfolios for users who don't have any portfolio"
 
     def handle(self, *args, **options):
         users = User.objects.all()
 
-        if not users.exists():
-            self.stdout.write(
-                self.style.ERROR("No users found.")
-            )
-            return
+        created_count = 0
+        skipped_count = 0
 
         brokers = [
-            "MetaTrader",
             "IC Markets",
             "XM",
             "Exness",
-            "Pepperstone",
             "FTMO",
+            "Pepperstone",
+            "RoboForex",
         ]
 
         portfolio_names = [
             "Main Account",
-            "Forex Account",
-            "Crypto Account",
             "Trading Account",
-            "Investment",
-            "Scalping",
-            "Swing Trading",
+            "Forex Account",
+            "Personal Account",
+            "Scalping Account",
+            "Swing Account",
+            "Investment Account",
+            "Prop Account",
+            "Demo Account",
+            "Strategy Account",
         ]
 
-        currencies = [
-            "USD",
-            "EUR",
-            "USDT",
-        ]
+        currencies = ["USD", "EUR", "USDT"]
 
         leverages = [
             "1:30",
@@ -51,65 +46,44 @@ class Command(BaseCommand):
             "1:500",
         ]
 
-        created_count = 0
-
         for user in users:
 
-            # برای هر کاربر 2 تا 4 پورتفولیو
-            portfolio_count = randint(2, 4)
+            # اگر کاربر حتی یک Portfolio داشته باشد،
+            # هیچ Portfolio جدیدی برای او ساخته نمی‌شود.
+            if user.portfolios.exists():
+                skipped_count += 1
+                continue
+
+            portfolio_count = random.randint(7, 10)
 
             for i in range(portfolio_count):
-
-                currency = choice(currencies)
-
-                # موجودی اولیه
-                balance = Decimal(
-                    str(
-                        round(
-                            uniform(1000, 50000),
-                            2
-                        )
-                    )
-                )
-
-                portfolio = Portfolio.objects.create(
+                Portfolio.objects.create(
                     user=user,
-
-                    name=f"{choice(portfolio_names)} {i + 1}",
-
-                    broker=choice(brokers),
-
-                    balance=balance,
-
-                    profit_loss=Decimal("0"),
-
+                    name=f"{random.choice(portfolio_names)} {i + 1}",
+                    broker=random.choice(brokers),
+                    balance=random.randint(1000, 100000),
+                    profit_loss=0,
                     transactions_count=0,
-
-                    leverage=choice(leverages),
-
-                    currency=currency,
-
-                    profit_percentage=Decimal("0"),
-
-                    is_active=True,
-
+                    leverage=random.choice(leverages),
+                    currency=random.choice(currencies),
+                    profit_percentage=0,
+                    is_active=(i == 0),
                     is_archived=False,
-
-                    mt_connection=choice([
-                        True,
-                        False,
-                    ]),
+                    mt_connection=False,
                 )
 
                 created_count += 1
 
-                self.stdout.write(
-                    f"Created portfolio '{portfolio.name}' "
-                    f"for user {user.id}"
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Created {portfolio_count} portfolios for user: {user.email}"
                 )
+            )
 
+        self.stdout.write("")
         self.stdout.write(
             self.style.SUCCESS(
-                f"\n{created_count} fake portfolios created successfully."
+                f"Finished! Created: {created_count} portfolios | "
+                f"Skipped users: {skipped_count}"
             )
         )
