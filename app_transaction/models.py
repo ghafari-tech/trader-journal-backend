@@ -11,10 +11,10 @@ def generate_api_key():
 
 
 class MetaTraderAccount(models.Model):
-    portfolio = models.ForeignKey(
+    portfolio = models.OneToOneField(
         Portfolio,
         on_delete=models.CASCADE,
-        related_name="mt_accounts"
+        related_name="mt_account"
     )
 
     api_key = models.CharField(
@@ -179,16 +179,14 @@ class Transaction(models.Model):
             self.transaction_id = f"T-{number}"
 
         # محاسبه سود و ضرر معامله
-        if self.exit_price is not None:
-
+        if self.exit_price is not None and self.profit_loss is None:
             if self.transaction_type == "buy":
                 profit = (
-                    self.exit_price - self.entry_price
+                     self.exit_price - self.entry_price
                 ) * self.volume
-
-            else:  # sell
+            else:
                 profit = (
-                    self.entry_price - self.exit_price
+                     self.entry_price - self.exit_price
                 ) * self.volume
 
             self.profit_loss = profit.quantize(

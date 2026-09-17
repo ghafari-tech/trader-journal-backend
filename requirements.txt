@@ -1,5 +1,6 @@
 asgiref==3.12.1
 attrs==26.1.0
+beautifulsoup4==4.15.0
 certifi==2026.7.22
 cffi==2.1.1
 charset-normalizer==3.5.1
@@ -25,6 +26,7 @@ PyYAML==6.0.3
 referencing==0.37.0
 requests==2.34.2
 rpds-py==2026.6.3
+soupsieve==2.9.2
 sqlparse==0.5.5
 typing_extensions==4.16.0
 uritemplate==4.2.0

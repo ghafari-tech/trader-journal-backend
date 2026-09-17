@@ -156,9 +156,11 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Treider API",
+    "TITLE": "Trader API",
     "DESCRIPTION": "API Documentation",
     "VERSION": "1.0.0",
+
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -179,8 +181,8 @@ MT5_SERVICE_URL = config('MT5_SERVICE_URL')
 MT5_INTERNAL_SECRET = config('MT5_INTERNAL_SECRET')
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=365),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=36500),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 
     'ROTATE_REFRESH_TOKENS': False,
 }
