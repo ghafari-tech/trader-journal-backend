@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 
-app_name = 'goal'
+app_name = 'badge'
 
 urlpatterns = [
     path('', views.badge_list, name='badges'),
