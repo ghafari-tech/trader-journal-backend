@@ -30,7 +30,7 @@ def notification_user_list(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def notification_click(request, pk):
-    """با کلیک بر روی یکی از اعلانات این API باید اجرا بشه"""
+    """با کلیک بر روی یکی از اعلانات این باید اجرا بشه"""
     notification = Notification.objects.get(pk=pk)
 
     if not notification:
