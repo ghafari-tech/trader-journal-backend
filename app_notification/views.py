@@ -16,7 +16,8 @@ from app_notification.models import Notification
 def notification_user_list(request):
     notifications = Notification.objects.filter(
         user=request.user,
-        is_active=True
+        is_active=True,
+        is_read=False
     )
 
     serializer = NotificationSerializer(notifications, many=True)
@@ -29,6 +30,7 @@ def notification_user_list(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def notification_click(request, pk):
+    """با کلیک بر روی یکی از اعلانات این API باید اجرا بشه"""
     notification = Notification.objects.get(pk=pk)
 
     if not notification:
