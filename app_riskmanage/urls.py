@@ -6,4 +6,5 @@ app_name = 'riskmanage'
 urlpatterns = [
     path('', views.risk_management_show, name='risk_management_show'),
     path('update/', views.edit_risk_management, name='edit_risk_management'),
+    path('look/', views.look_risk_management, name='look_risk_management'),
 ]
