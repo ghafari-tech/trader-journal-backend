@@ -21,6 +21,24 @@ def notification_user_list(request):
 
     serializer = NotificationSerializer(notifications, many=True)
 
-    return JsonResponse({
+    return Response({
         'notifications': serializer.data,
+    }, status=200)
+
+@extend_schema(tags=['Notification'])
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def notification_click(request, pk):
+    notification = Notification.objects.get(pk=pk)
+
+    if not notification:
+        return Response({
+            'message': 'Notification not found',
+        }, status=404)
+
+    notification.is_read = True
+    notification.save(update_fields=['is_read'])
+
+    return Response({
+        'message': 'Notification reed',
     }, status=200)
