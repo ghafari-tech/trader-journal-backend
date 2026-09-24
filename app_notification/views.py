@@ -31,7 +31,7 @@ def notification_user_list(request):
 @permission_classes([IsAuthenticated])
 def notification_click(request, pk):
     """با کلیک بر روی یکی از اعلانات این باید اجرا بشه"""
-    notification = Notification.objects.get(pk=pk, user=request.user)
+    notification = Notification.objects.filter(pk=pk, user=request.user).fisrt()
 
     if not notification:
         return Response({
