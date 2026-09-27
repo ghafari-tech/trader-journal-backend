@@ -9,4 +9,6 @@ urlpatterns = [
     path('metatrader/heartbeat/', views.metatrader_heartbeat, name='metatrader_heartbeat'),
     path('metatrader/sync-transactions/', views.metatrader_sync_transactions, name='metatrader_sync_transactions'),
     path('metatrader/download-ea/', views.download_ea, name='download_ea'),
+    path('notification/', views.notification_settings, name='notification_settings'),
+    path('notification/update/', views.update_notification_setting, name='update_notification_setting'),
 ]

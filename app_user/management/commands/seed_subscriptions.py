@@ -1,7 +1,7 @@
 import random
 from django.core.management.base import BaseCommand
 
-from app_user.models import User, Subscription
+from app_user.models import User, UserSubscription
 
 
 class Command(BaseCommand):
@@ -14,7 +14,7 @@ class Command(BaseCommand):
         skipped_count = 0
 
         for user in users:
-            if Subscription.objects.filter(user=user).exists():
+            if UserSubscription.objects.filter(user=user).exists():
                 skipped_count += 1
                 continue
 
@@ -24,7 +24,7 @@ class Command(BaseCommand):
                 "pro max",
             ])
 
-            Subscription.objects.create(
+            UserSubscription.objects.create(
                 user=user,
                 type=subscription_type,
             )

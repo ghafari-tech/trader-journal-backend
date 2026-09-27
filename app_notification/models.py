@@ -14,3 +14,12 @@ class Notification(models.Model):
         return self.title
 
 
+class NotificationSettings(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notification_settings')
+    add_journal_notif = models.BooleanField(default=False)
+    risk_up_warning_notif = models.BooleanField(default=True)
+    ai_report_weekly_mail = models.BooleanField(default=False)
+    fomo_notif = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.email

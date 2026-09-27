@@ -1,5 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from django.utils import timezone
+from app_notification.models import NotificationSettings
 from app_portfolio.models import Portfolio
 from app_transaction.authentication import MetaTraderApiKeyAuthentication
 from .serializers import *
@@ -28,10 +29,10 @@ def user_info(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_plan_info(request):
-    plan = Subscription.objects.filter(user=request.user).first()
+    plan = UserSubscription.objects.filter(user=request.user).first()
 
     if not plan:
-        plan = Subscription.objects.create(user=request.user)
+        plan = UserSubscription.objects.create(user=request.user)
 
     serializer = UserPlanSerializer(plan)
 
@@ -254,3 +255,42 @@ def download_ea(request):
         as_attachment=True,
         filename='TradeJournalEA.ex5'
     )
+
+@extend_schema(tags=['Settings'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notification_settings(request):
+    notification_settings, created = NotificationSettings.objects.get_or_create(
+        user=request.user,
+    )
+
+    return Response({
+        'add_journal_notif': notification_settings.add_journal_notif,
+        'risk_up_warning_notif': notification_settings.risk_up_warning_notif,
+        'ai_report_weekly_mail': notification_settings.ai_report_weekly_mail,
+        'fomo_notif': notification_settings.fomo_notif,
+    }, status=200)
+
+@extend_schema(tags=["Settings"], request=UpdateNotificationSettingsSerializer)
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_notification_setting(request):
+    serializer = UpdateNotificationSettingsSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    field = serializer.validated_data["field"]
+    value = serializer.validated_data["value"]
+
+    notification_settings, _ = NotificationSettings.objects.get_or_create(
+        user=request.user,
+    )
+
+    setattr(notification_settings, field, value)
+    notification_settings.save(update_fields=[field])
+
+    return Response(
+        {
+            "message": "Notification setting updated successfully.",
+            "field": field,
+            "value": value,
+        },status=200)

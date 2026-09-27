@@ -44,3 +44,4 @@ def notification_click(request, pk):
     return Response({
         'message': 'Notification reed',
     }, status=200)
+

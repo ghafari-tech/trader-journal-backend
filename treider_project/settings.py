@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'app_portfolio',
     'app_admin',
     'app_badge',
+    'app_setting',
 ]
 
 MIDDLEWARE = [

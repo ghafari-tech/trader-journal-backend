@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from app_user.models import User, Subscription
+from app_user.models import User, UserSubscription
 from app_transaction.models import Transaction
 from app_goal.models import Goal
 from app_journal.models import Journal
@@ -54,7 +54,7 @@ class Command(BaseCommand):
             # SUBSCRIPTION
             # ==================================================
 
-            subscription, created = Subscription.objects.get_or_create(
+            subscription, created = UserSubscription.objects.get_or_create(
                 user=user,
                 defaults={
                     "type": "pro",

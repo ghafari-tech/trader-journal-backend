@@ -29,7 +29,7 @@ def register(request):
         password=password,
     )
 
-    Subscription.objects.create(user=user)
+    UserSubscription.objects.create(user=user)
 
     return Response({
         "message": "User created successfully.",

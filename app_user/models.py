@@ -4,6 +4,8 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+from app_setting.models import Subscription
+
 
 class UserManager(BaseUserManager):
 
@@ -102,17 +104,8 @@ class EmailVerificationCode(models.Model):
             and timezone.now() < self.expires_at
         )
 
-class Subscription(models.Model):
-    SUBSCRIPTION_TYPE_CHOICES = [
-        ('', 'Free'),
-        ('pro', 'Pro'),
-        ('pro max', 'ProMax')
-    ]
+class UserSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="plan")
-    type = models.CharField(
-        max_length=7,
-        choices=SUBSCRIPTION_TYPE_CHOICES,
-        default=''
-    )
+    type = models.ForeignKey(Subscription, on_delete=models.CASCADE, related_name="user_subscriptions")
     start_date = models.DateField(default=timezone.now)
     end_date = models.DateField(null=True, blank=True)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from app_user.models import Subscription
+from app_user.models import UserSubscription
 
 
 class LoginSerializer(serializers.Serializer):
@@ -20,5 +20,5 @@ class VerifyEmailSerializer(serializers.Serializer):
 
 class UserPlanSerializer(serializers.Serializer):
     class Meta:
-        model = Subscription
+        model = UserSubscription
         fields = '__all__'
