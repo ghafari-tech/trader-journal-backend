@@ -170,8 +170,8 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = "your_email@gmail.com"
-EMAIL_HOST_PASSWORD = "your_app_password"
+EMAIL_HOST_USER = "trader.journal.mail@gmail.com"
+EMAIL_HOST_PASSWORD = "uceoacflontlrfbh"
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 

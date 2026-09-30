@@ -20,13 +20,14 @@ from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
 )
-from app_user.views import login_view, register, logout_view
+from app_user.views import login_view, register, logout_view, verify
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('signup/', register, name='signup'),
+    path('verify/', verify, name='verify'),
     path('app/journal/', include('app_journal.urls')),
     path('notification/', include('app_notification.urls')),
     path('app/risk/', include('app_riskmanage.urls')),
@@ -37,6 +38,7 @@ urlpatterns = [
     path('app/admin/', include('app_admin.urls')),
     path('app/settings/', include('app_setting.urls')),
     path('app/achievements/', include('app_badge.urls')),
+    path('app/user/', include('app_user.urls')),
     # path("verfy/", verify, name="send-email"),
     path(
         'api/schema/',

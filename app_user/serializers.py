@@ -17,6 +17,7 @@ class LogoutSerializer(serializers.Serializer):
 
 class VerifyEmailSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    code = serializers.CharField()
 
 class UserPlanSerializer(serializers.Serializer):
     class Meta:
