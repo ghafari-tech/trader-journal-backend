@@ -42,4 +42,4 @@ class RegenerateAIAnalysisRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AIAnalysisRequest
-        fields = ['portfolio', 'models_id']
+        fields = ['models_id']
