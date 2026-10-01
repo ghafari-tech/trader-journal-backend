@@ -10,20 +10,65 @@ from .models import (
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+import json
+import requests
+from django.db import transaction
+
+def call_ai_model(ai_model, prompt):
+    """
+    فراخوانی مدل هوش مصنوعی. این نمونه برای OpenAI-compatible API است.
+    اگر از سرویس دیگری استفاده می‌کنی، url و payload را تغییر بده.
+    """
+    api_key = ai_model.api_key
+    model_name = ai_model.model  # مثلا gpt-4o-mini
+
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model_name,
+        "messages": [
+            {
+                "role": "system",
+                "content": "تو یک مربی ترید حرفه‌ای هستی. فقط و فقط JSON معتبر برگردان."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.3,
+        # اگر مدل پشتیبانی می‌کند:
+        "response_format": {"type": "json_object"}
+    }
+
+    response = requests.post(url, headers=headers, json=payload, timeout=90)
+    response.raise_for_status()
+
+    content = response.json()["choices"][0]["message"]["content"]
+    content = content.strip()
+
+    # پاک‌سازی اگر AI داخل ```json گذاشته باشد
+    if content.startswith("```"):
+        content = content.split("```")[1]
+        if content.startswith("json"):
+            content = content[4:]
+        content = content.strip()
+
+    return json.loads(content)
 
 
-
-def generate_and_save_ai_analysis(portfolio, model_name=None):
-    if model_name:
-        ai_model = AIModel.objects.filter(name=model_name).first()
-    else:
-        ai_model = AIModel.objects.first()
+def generate_and_save_ai_analysis(portfolio, ai_model=None):
+    if ai_model is None:
+        ai_model = AIModel.objects.filter(is_default=True).first() or AIModel.objects.first()
 
     if not ai_model:
         raise ValueError("مدل هوش مصنوعی یافت نشد.")
 
     recent_trades = Transaction.objects.filter(
-        portfolio=portfolio, 
+        portfolio=portfolio,
         closed_at__isnull=False
     ).order_by('-closed_at')[:50]
 
@@ -39,42 +84,66 @@ def generate_and_save_ai_analysis(portfolio, model_name=None):
         for t in recent_trades
     ]
 
-    ai_response = {
-        "weekly_report": "علی عزیز — هفته خوبی داشتی. پایبندی به حد ضرر تو ۹۲٪ بوده که عالی است...",
-        "trading_regime": 78,
-        "capital_management": 84,
-        "psychology": 62,
-        "adherence_to_the_plan": 71,
-        "strengths": [
-            {
-                "title": "پایبندی بالا به حد ضرر در ۹۲٪ معاملات",
-                "maintaining_sustainability": "قبل از هر معامله، SL را همان لحظه ورود در پلتفرم ثبت کن."
-            }
-        ],
-        "weaknesses": [
-            {
-                "title": "الگوی Revenge Trading بعد از ۳ ضرر متوالی",
-                "solution": "بعد از ۲ ضرر متوالی، پلتفرم را قفل کن و ۳۰ دقیقه پیاده‌روی کن."
-            }
-        ],
-        "performance_days": [
-            {
-                "date": "2024-10-23", 
-                "description": "گزارش عملکرد روزانه...",
-                "transaction_count": 4,
-                "net_profit": 588.00,
-                "win_rate": 75.0,
-                "adherence_to_the_plan": 75.0,
-                "best_trade": "EURUSD",
-                "worst_trade": "US30",
-                "golden_window": "۱۰:۰۰ تا ۱۳:۰۰"
-            }
-        ],
-        "suggested_exercises": [
-            {"text": "۳ روز فقط ست‌آپ‌های +A ترید کن."},
-            {"text": "قبل از هر معامله، دلیل ورود را بنویس."}
-        ]
-    }
+    prompt = f"""
+    تو یک تحلیلگر معاملاتی حرفه‌ای هستی. بر اساس داده‌های معاملات بسته‌شده‌ی زیر، یک تحلیل کامل به زبان فارسی ارائه بده.
+    خروجی را دقیقاً به صورت یک JSON معتبر برگردان. هیچ متن اضافه‌ای بیرون از JSON ننویس.
+
+    داده‌های معاملات بسته‌شده:
+    {json.dumps(trades_data, ensure_ascii=False, indent=2)}
+
+    ساختار JSON مورد نیاز:
+    {{
+    "weekly_report": "متن گزارش هفتگی به فارسی",
+    "trading_regime": عدد صحیح بین ۰ تا ۱۰۰,
+    "capital_management": عدد صحیح بین ۰ تا ۱۰۰,
+    "psychology": عدد صحیح بین ۰ تا ۱۰۰,
+    "adherence_to_the_plan": عدد صحیح بین ۰ تا ۱۰۰,
+    "strengths": [
+        {{
+        "title": "عنوان نقطه قوت",
+        "maintaining_sustainability": "راهکار حفظ و تداوم این نقطه قوت"
+        }}
+    ],
+    "weaknesses": [
+        {{
+        "title": "عنوان نقطه ضعف",
+        "solution": "راهکار پیشنهادی برای رفع این نقطه ضعف"
+        }}
+    ],
+    "performance_days": [
+        {{
+        "date": "تاریخ به فرمت YYYY-MM-DD",
+        "description": "توضیح عملکرد آن روز",
+        "transaction_count": عدد صحیح,
+        "net_profit": عدد اعشاری (سود/ضرر خالص به دلار),
+        "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
+        "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
+        "best_trade": "نام نماد بهترین معامله",
+        "worst_trade": "نام نماد بدترین معامله",
+        "golden_window": "بازه‌ی زمانی طلایی معاملات آن روز"
+        }}
+    ],
+    "performance_weeks": [
+        {{
+        "week_start_date": "تاریخ شروع هفته به فرمت YYYY-MM-DD",
+        "week_end_date": "تاریخ پایان هفته به فرمت YYYY-MM-DD",
+        "description": "توضیح عملکرد هفتگی",
+        "transaction_count": عدد صحیح,
+        "net_profit": عدد اعشاری,
+        "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
+        "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
+        "best_trade": "نام نماد بهترین معامله",
+        "worst_trade": "نام نماد بدترین معامله",
+        "golden_window": "بازه‌ی زمانی طلایی معاملات آن هفته"
+        }}
+    ],
+    "suggested_exercises": [
+        {{ "text": "متن تمرین پیشنهادی" }}
+    ]
+    }}
+    """
+
+    ai_response = call_ai_model(ai_model, prompt)
 
     with transaction.atomic():
         analysis = AIAnalysis.objects.create(
@@ -90,35 +159,50 @@ def generate_and_save_ai_analysis(portfolio, model_name=None):
         for strength in ai_response.get("strengths", []):
             Strengths.objects.create(
                 analysis=analysis,
-                title=strength['title'],
-                maintaining_sustainability=strength['maintaining_sustainability']
+                title=strength.get("title", ""),
+                maintaining_sustainability=strength.get("maintaining_sustainability", "")
             )
 
         for weakness in ai_response.get("weaknesses", []):
             Weaknesses.objects.create(
                 analysis=analysis,
-                title=weakness['title'],
-                solution=weakness['solution']
+                title=weakness.get("title", ""),
+                solution=weakness.get("solution", "")
             )
 
         for day_report in ai_response.get("performance_days", []):
             PerformanceReportDay.objects.create(
                 analysis=analysis,
-                date=day_report['date'],
-                description=day_report['description'],
-                transaction_count=day_report['transaction_count'],
-                net_profit=day_report['net_profit'],
-                win_rate=day_report['win_rate'],
-                adherence_to_the_plan=day_report['adherence_to_the_plan'],
-                best_trade=day_report['best_trade'],
-                worst_trade=day_report['worst_trade'],
-                golden_window=day_report['golden_window']
+                date=day_report.get("date"),
+                description=day_report.get("description", ""),
+                transaction_count=day_report.get("transaction_count", 0),
+                net_profit=day_report.get("net_profit", 0),
+                win_rate=day_report.get("win_rate", 0),
+                adherence_to_the_plan=day_report.get("adherence_to_the_plan", 0),
+                best_trade=day_report.get("best_trade", ""),
+                worst_trade=day_report.get("worst_trade", ""),
+                golden_window=day_report.get("golden_window", "")
+            )
+
+        for week_report in ai_response.get("performance_weeks", []):
+            PerformanceReportWeek.objects.create(
+                analysis=analysis,
+                week_start_date=week_report.get("week_start_date"),
+                week_end_date=week_report.get("week_end_date"),
+                description=week_report.get("description", ""),
+                transaction_count=week_report.get("transaction_count", 0),
+                net_profit=week_report.get("net_profit", 0),
+                win_rate=week_report.get("win_rate", 0),
+                adherence_to_the_plan=week_report.get("adherence_to_the_plan", 0),
+                best_trade=week_report.get("best_trade", ""),
+                worst_trade=week_report.get("worst_trade", ""),
+                golden_window=week_report.get("golden_window", "")
             )
 
         for exercise in ai_response.get("suggested_exercises", []):
             SuggestedExercises.objects.create(
                 analysis=analysis,
-                text=exercise['text']
+                text=exercise.get("text", "")
             )
 
     return analysis
@@ -132,16 +216,16 @@ def ai_analysis_view(request):
         return Response({"error": "پورتفوی فعالی یافت نشد."}, status=404)
 
     analysis = AIAnalysis.objects.filter(portfolio=portfolio).order_by('-date').first()
-    
     if analysis:
         serializer = AIAnalysisSerializer(analysis)
         return Response(serializer.data, status=200)
 
     try:
         default_model = AIModel.objects.filter(is_default=True).first()
-        model_name = default_model.name if default_model else None
-        
-        analysis = generate_and_save_ai_analysis(portfolio, model_name=model_name)
+        if not default_model:
+            return Response({"error": "مدل پیش‌فرض هوش مصنوعی یافت نشد."}, status=400)
+
+        analysis = generate_and_save_ai_analysis(portfolio, ai_model=default_model)
     except Exception as e:
         return Response({"error": str(e)}, status=400)
 
