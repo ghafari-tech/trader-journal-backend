@@ -4,7 +4,7 @@ from drf_spectacular.utils import extend_schema
 from google import genai
 from google.genai import types
 
-from app_ai_analysis.serializers import AIAnalysisSerializer
+from .serializers import *
 from app_portfolio.models import Portfolio
 from app_transaction.models import Transaction
 from .models import *
@@ -278,7 +278,7 @@ def ai_models_list_view(request):
     return Response(list(models), status=200)
 
 
-@extend_schema(tags=["AI Analysis"])
+@extend_schema(tags=["AI Analysis"], request=RegenerateAIAnalysisRequestSerializer)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def regenerate_ai_analysis_view(request):

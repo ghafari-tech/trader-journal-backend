@@ -36,3 +36,10 @@ class AIAnalysisSerializer(serializers.ModelSerializer):
     class Meta:
         model = AIAnalysis
         fields = '__all__'
+
+class RegenerateAIAnalysisRequestSerializer(serializers.ModelSerializer):
+    models_id = serializers.IntegerField(required=True, write_only=True)
+
+    class Meta:
+        model = AIAnalysisRequest
+        fields = ['portfolio', 'models_id']
