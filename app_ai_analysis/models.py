@@ -7,6 +7,7 @@ class AIModel(models.Model):
     model = models.CharField(max_length=100)
     description = models.TextField()
     api = models.URLField(max_length=200)
+    is_default = models.BooleanField(default=False)
     
 
 class AIAnalysis(models.Model):
