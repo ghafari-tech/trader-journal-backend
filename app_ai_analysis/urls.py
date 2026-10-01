@@ -1,8 +1,8 @@
 from django.urls import path
-from . import views
-
-app_name = 'ai_analysis'
+from .views import *
 
 urlpatterns = [
-    path('analysis/', views.ai_analysis_view, name='ai-analysis'),
+    path("", ai_analysis_view, name="ai-analysis"),
+    path("regenerate/", regenerate_ai_analysis_view, name="ai-analysis-regenerate"),
+    path("models/", ai_models_list_view, name="ai-models-list"),
 ]

@@ -60,3 +60,25 @@ class PerformanceReportWeek(models.Model):
 class SuggestedExercises(models.Model):
     analysis = models.ForeignKey(AIAnalysis, on_delete=models.CASCADE)
     text = models.TextField() # A brief explanation of artificial intelligence
+
+class AIAnalysisRequest(models.Model):
+    user = models.ForeignKey(
+        "app_user.User",
+        on_delete=models.CASCADE,
+        related_name="ai_analysis_requests",
+    )
+    portfolio = models.ForeignKey(
+        Portfolio,
+        on_delete=models.CASCADE,
+        related_name="ai_analysis_requests",
+    )
+    model_used = models.ForeignKey(
+        AIModel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]

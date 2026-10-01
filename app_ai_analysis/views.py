@@ -7,13 +7,12 @@ from google.genai import types
 from app_ai_analysis.serializers import AIAnalysisSerializer
 from app_portfolio.models import Portfolio
 from app_transaction.models import Transaction
-from .models import (
-    AIModel, AIAnalysis, Strengths, Weaknesses,
-    PerformanceReportDay, PerformanceReportWeek, SuggestedExercises
-)
+from .models import *
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.utils import timezone
+from app_user.models import UserSubscription
 
 
 def call_ai_model(ai_model, prompt):
@@ -210,28 +209,131 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
     return analysis
 
 
+PLAN_DAILY_LIMITS = {
+    "free": 1,
+    "pro": 3,
+    "pro_max": 10,
+}
+
+
+def _resolve_plan(user):
+    try:
+        sub = user.plan
+    except UserSubscription.DoesNotExist:
+        return "free"
+
+    today = timezone.now().date()
+    if sub.end_date and sub.end_date < today:
+        return "free"
+
+    subscription = sub.type
+    name = (getattr(subscription, "name", "") or "").lower()
+    code = (getattr(subscription, "type", "") or "").lower()
+    value = code or name
+
+    if "max" in value:
+        return "pro_max"
+    if "pro" in value:
+        return "pro"
+    return "free"
+
+
 @extend_schema(tags=["AI Analysis"])
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def ai_analysis_view(request):
     portfolio = Portfolio.objects.filter(user=request.user, is_active=True).first()
     if not portfolio:
         return Response({"error": "پورتفوی فعالی یافت نشد."}, status=404)
 
-    analysis = AIAnalysis.objects.filter(portfolio=portfolio).order_by('-date').first()
-
+    analysis = AIAnalysis.objects.filter(portfolio=portfolio).order_by("-date").first()
     if analysis:
-        serializer = AIAnalysisSerializer(analysis)
-        return Response(serializer.data, status=200)
+        return Response(AIAnalysisSerializer(analysis).data, status=200)
 
     try:
         default_model = AIModel.objects.filter(is_default=True).first()
         if not default_model:
             return Response({"error": "مدل پیش‌فرض هوش مصنوعی یافت نشد."}, status=400)
 
-        analysis = generate_and_save_ai_analysis(portfolio, ai_model=default_model)
+        with transaction.atomic():
+            AIAnalysisRequest.objects.create(
+                user=request.user,
+                portfolio=portfolio,
+                model_used=default_model,
+            )
+            analysis = generate_and_save_ai_analysis(portfolio, ai_model=default_model)
     except Exception as e:
         return Response({"error": str(e)}, status=400)
 
-    serializer = AIAnalysisSerializer(analysis)
-    return Response(serializer.data, status=201)
+    return Response(AIAnalysisSerializer(analysis).data, status=201)
+
+
+@extend_schema(tags=["AI Analysis"])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ai_models_list_view(request):
+    models = AIModel.objects.all().values(
+        "id", "name", "model", "description", "is_default"
+    )
+    return Response(list(models), status=200)
+
+
+@extend_schema(tags=["AI Analysis"])
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def regenerate_ai_analysis_view(request):
+    portfolio = Portfolio.objects.filter(user=request.user, is_active=True).first()
+    if not portfolio:
+        return Response({"error": "پورتفوی فعالی یافت نشد."}, status=404)
+
+    plan = _resolve_plan(request.user)
+    daily_limit = PLAN_DAILY_LIMITS.get(plan, 1)
+
+    today = timezone.now().date()
+    used_today = AIAnalysisRequest.objects.filter(
+        portfolio=portfolio,
+        created_at__date=today,
+    ).count()
+
+    if used_today >= daily_limit:
+        return Response(
+            {
+                "error": "سهمیه امروز شما به پایان رسیده است.",
+                "plan": plan,
+                "limit": daily_limit,
+                "used": used_today,
+            },
+            status=429,
+        )
+
+    model_id = request.data.get("model_id")
+    if model_id:
+        ai_model = AIModel.objects.filter(id=model_id).first()
+        if not ai_model:
+            return Response({"error": "مدل انتخابی یافت نشد."}, status=404)
+    else:
+        ai_model = AIModel.objects.filter(is_default=True).first()
+        if not ai_model:
+            return Response({"error": "مدل پیش‌فرض هوش مصنوعی یافت نشد."}, status=400)
+
+    try:
+        with transaction.atomic():
+            AIAnalysis.objects.filter(portfolio=portfolio).delete()
+            AIAnalysisRequest.objects.create(
+                user=request.user,
+                portfolio=portfolio,
+                model_used=ai_model,
+            )
+            analysis = generate_and_save_ai_analysis(portfolio, ai_model=ai_model)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+    return Response(
+        {
+            "analysis": AIAnalysisSerializer(analysis).data,
+            "plan": plan,
+            "limit": daily_limit,
+            "used": used_today + 1,
+        },
+        status=201,
+    )
