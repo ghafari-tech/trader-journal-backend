@@ -10,16 +10,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-
 from app_admin.views import subscriptions_list
 from app_setting.models import Subscription
 from app_user.models import User, EmailVerificationCode, UserSubscription
-from .serializers import (
-    RegisterSerializer,
-    VerifyEmailSerializer,
-    LoginSerializer,
-    LogoutSerializer,
-)
+from .serializers import *
 
 
 @extend_schema(request=RegisterSerializer, tags=["Authentication"])
@@ -121,7 +115,7 @@ def register(request):
 
 @extend_schema(request=VerifyEmailSerializer, tags=["Authentication"])
 @api_view(["POST"])
-def verify(request):
+def verify_register(request):
     serializer = VerifyEmailSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -212,4 +206,104 @@ def logout_view(request):
         return Response({
             "message": "Invalid refresh token."
         }, status=400)
+    
+
+@extend_schema(tags=['Authentication'], request=ForgotPasswordSerializer)
+@api_view(['POST'])
+def forgot_password(request):
+    email = request.data.get('email', None)
+
+    try:
+        if not email:
+            return Response({
+                "message": "Email is required."
+            }, status=400)
+
+        user = User.objects.get(email=email)
+        if not user:
+            return Response({
+                "message": "User with this email does not exist."
+            }, status=404)
+        if not user.is_verified:
+            return Response({
+                "message": "Please verify your email before resetting password(register first).",
+            }, status=403)
+
+        code = str(secrets.randbelow(1_000_000)).zfill(6)
+
+        EmailVerificationCode.objects.create(
+            user=user,
+            code=code,
+            expires_at=timezone.now() + timedelta(minutes=5)
+        )
+
+        send_mail(
+            subject="Password Reset Code",
+            message=f"""
+            تریدر جورنال - کد بازیابی رمز عبور:
+
+            {code}
+
+            این کد محرمانه هست و نباید به کسی بدهید
+            هرکس این کد را بخواهد قطعا کلاهبردار است
+            این کد تا ۵ دقیقه در دسترس شما خواهد بود
+            """,
+            from_email=None,
+            recipient_list=[user.email],
+        )
+
+        return Response({
+            "message": "Password reset code sent successfully.",
+            "email": email,
+        }, status=200)
+    except User.DoesNotExist:
+        return Response({
+            "message": "User with this email does not exist."
+        }, status=404)
+    
+    except Exception as e:
+        return Response({
+            "message": "An error occurred while processing your request.",
+            "error": str(e)
+        }, status=500)
+
+@extend_schema(request=ResetPasswordSerializer, tags=['Authentication'])
+@api_view(['POST'])
+def reset_password(request):
+    """حتما دوبار پسورد جدید رو باید وارد کنید و چک کنید که با هم برابر باشند"""
+    serializer = ResetPasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = serializer.validated_data['email']
+    code = serializer.validated_data['code']
+    new_password = serializer.validated_data['new_password']
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({
+            "message": "User with this email does not exist."
+        }, status=404)
+
+    verification = EmailVerificationCode.objects.filter(
+        user=user,
+        code=code,
+        is_used=False,
+    ).order_by("-created_at").first()
+
+    if verification is None or not verification.is_valid():
+        return Response({
+            "message": "Invalid or expired verification code.",
+        }, status=400)
+
+    user.set_password(new_password)
+    user.save()
+
+    verification.is_used = True
+    verification.save(update_fields=["is_used"])
+
+    return Response({
+        "message": "Password has been reset successfully. Please login with your new password.",
+    }, status=200)
+
 

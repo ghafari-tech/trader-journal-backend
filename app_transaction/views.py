@@ -9,7 +9,6 @@ from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from rest_framework.response import Response
 from .pagination import TransactionPagination
-from rest_framework import status
 from app_transaction.models import MetaTraderAccount
 from bs4 import BeautifulSoup
 import re
@@ -227,7 +226,7 @@ def import_metatrader_report(request):
             {
                 "detail": "Portfolio not found."
             },
-            status=status.HTTP_404_NOT_FOUND
+            status=404
         )
 
     file_content = uploaded_file.read()
@@ -250,7 +249,7 @@ def import_metatrader_report(request):
             {
                 "detail": "Positions section not found in report."
             },
-            status=status.HTTP_400_BAD_REQUEST
+            status=400
         )
 
     positions_row = positions_title.find_parent("tr")
@@ -350,5 +349,5 @@ def import_metatrader_report(request):
         {
             "message": f"{len(transactions)} transactions imported successfully."
         },
-        status=status.HTTP_200_OK
+        status=200
     )

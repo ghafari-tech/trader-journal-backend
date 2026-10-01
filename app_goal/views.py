@@ -1,5 +1,4 @@
 from app_portfolio.models import Portfolio
-from app_portfolio.views import portfolio_archive
 from .serializers import *
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
