@@ -1,63 +1,56 @@
+import json
+import requests
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from app_ai_analysis.serializers import AIAnalysisSerializer
 from app_portfolio.models import Portfolio
 from app_transaction.models import Transaction
 from .models import (
-    AIModel, AIAnalysis, Strengths, Weaknesses, 
+    AIModel, AIAnalysis, Strengths, Weaknesses,
     PerformanceReportDay, PerformanceReportWeek, SuggestedExercises
 )
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-import json
-import requests
-from django.db import transaction
+
 
 def call_ai_model(ai_model, prompt):
-    """
-    فراخوانی مدل هوش مصنوعی. این نمونه برای OpenAI-compatible API است.
-    اگر از سرویس دیگری استفاده می‌کنی، url و payload را تغییر بده.
-    """
-    api_key = ai_model.api_key
-    model_name = ai_model.model  # مثلا gpt-4o-mini
+    base_url = (ai_model.url or "").rstrip("/")
+    if not base_url:
+        raise ValueError("آدرس سرویس هوش مصنوعی تنظیم نشده است.")
 
-    url = "https://api.openai.com/v1/chat/completions"
+    model_name = ai_model.model
+    url = f"{base_url}/v1beta/models/{model_name}:generateContent"
+
     headers = {
-        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+    if ai_model.api_key:
+        headers["x-goog-api-key"] = ai_model.api_key
+
     payload = {
-        "model": model_name,
-        "messages": [
-            {
-                "role": "system",
-                "content": "تو یک مربی ترید حرفه‌ای هستی. فقط و فقط JSON معتبر برگردان."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "temperature": 0.3,
-        # اگر مدل پشتیبانی می‌کند:
-        "response_format": {"type": "json_object"}
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "generationConfig": {
+            "temperature": 0.3,
+            "responseMimeType": "application/json",
+        }
     }
 
     response = requests.post(url, headers=headers, json=payload, timeout=90)
     response.raise_for_status()
 
-    content = response.json()["choices"][0]["message"]["content"]
-    content = content.strip()
+    data = response.json()
+    text_content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-    # پاک‌سازی اگر AI داخل ```json گذاشته باشد
-    if content.startswith("```"):
-        content = content.split("```")[1]
-        if content.startswith("json"):
-            content = content[4:]
-        content = content.strip()
+    if text_content.startswith("```"):
+        text_content = text_content.split("```")[1]
+        if text_content.startswith("json"):
+            text_content = text_content[4:]
+        text_content = text_content.strip()
 
-    return json.loads(content)
+    return json.loads(text_content)
 
 
 def generate_and_save_ai_analysis(portfolio, ai_model=None):
@@ -85,63 +78,63 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
     ]
 
     prompt = f"""
-    تو یک تحلیلگر معاملاتی حرفه‌ای هستی. بر اساس داده‌های معاملات بسته‌شده‌ی زیر، یک تحلیل کامل به زبان فارسی ارائه بده.
-    خروجی را دقیقاً به صورت یک JSON معتبر برگردان. هیچ متن اضافه‌ای بیرون از JSON ننویس.
+تو یک تحلیلگر معاملاتی حرفه‌ای هستی. بر اساس داده‌های معاملات بسته‌شده‌ی زیر، یک تحلیل کامل به زبان فارسی ارائه بده.
+خروجی را دقیقاً به صورت یک JSON معتبر برگردان. هیچ متن اضافه‌ای بیرون از JSON ننویس.
 
-    داده‌های معاملات بسته‌شده:
-    {json.dumps(trades_data, ensure_ascii=False, indent=2)}
+داده‌های معاملات بسته‌شده:
+{json.dumps(trades_data, ensure_ascii=False, indent=2)}
 
-    ساختار JSON مورد نیاز:
+ساختار JSON مورد نیاز:
+{{
+  "weekly_report": "متن گزارش هفتگی به فارسی",
+  "trading_regime": عدد صحیح بین ۰ تا ۱۰۰,
+  "capital_management": عدد صحیح بین ۰ تا ۱۰۰,
+  "psychology": عدد صحیح بین ۰ تا ۱۰۰,
+  "adherence_to_the_plan": عدد صحیح بین ۰ تا ۱۰۰,
+  "strengths": [
     {{
-    "weekly_report": "متن گزارش هفتگی به فارسی",
-    "trading_regime": عدد صحیح بین ۰ تا ۱۰۰,
-    "capital_management": عدد صحیح بین ۰ تا ۱۰۰,
-    "psychology": عدد صحیح بین ۰ تا ۱۰۰,
-    "adherence_to_the_plan": عدد صحیح بین ۰ تا ۱۰۰,
-    "strengths": [
-        {{
-        "title": "عنوان نقطه قوت",
-        "maintaining_sustainability": "راهکار حفظ و تداوم این نقطه قوت"
-        }}
-    ],
-    "weaknesses": [
-        {{
-        "title": "عنوان نقطه ضعف",
-        "solution": "راهکار پیشنهادی برای رفع این نقطه ضعف"
-        }}
-    ],
-    "performance_days": [
-        {{
-        "date": "تاریخ به فرمت YYYY-MM-DD",
-        "description": "توضیح عملکرد آن روز",
-        "transaction_count": عدد صحیح,
-        "net_profit": عدد اعشاری (سود/ضرر خالص به دلار),
-        "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
-        "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
-        "best_trade": "نام نماد بهترین معامله",
-        "worst_trade": "نام نماد بدترین معامله",
-        "golden_window": "بازه‌ی زمانی طلایی معاملات آن روز"
-        }}
-    ],
-    "performance_weeks": [
-        {{
-        "week_start_date": "تاریخ شروع هفته به فرمت YYYY-MM-DD",
-        "week_end_date": "تاریخ پایان هفته به فرمت YYYY-MM-DD",
-        "description": "توضیح عملکرد هفتگی",
-        "transaction_count": عدد صحیح,
-        "net_profit": عدد اعشاری,
-        "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
-        "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
-        "best_trade": "نام نماد بهترین معامله",
-        "worst_trade": "نام نماد بدترین معامله",
-        "golden_window": "بازه‌ی زمانی طلایی معاملات آن هفته"
-        }}
-    ],
-    "suggested_exercises": [
-        {{ "text": "متن تمرین پیشنهادی" }}
-    ]
+      "title": "عنوان نقطه قوت",
+      "maintaining_sustainability": "راهکار حفظ و تداوم این نقطه قوت"
     }}
-    """
+  ],
+  "weaknesses": [
+    {{
+      "title": "عنوان نقطه ضعف",
+      "solution": "راهکار پیشنهادی برای رفع این نقطه ضعف"
+    }}
+  ],
+  "performance_days": [
+    {{
+      "date": "تاریخ به فرمت YYYY-MM-DD",
+      "description": "توضیح عملکرد آن روز",
+      "transaction_count": عدد صحیح,
+      "net_profit": عدد اعشاری,
+      "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
+      "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
+      "best_trade": "نام نماد بهترین معامله",
+      "worst_trade": "نام نماد بدترین معامله",
+      "golden_window": "بازه‌ی زمانی طلایی معاملات آن روز"
+    }}
+  ],
+  "performance_weeks": [
+    {{
+      "week_start_date": "تاریخ شروع هفته به فرمت YYYY-MM-DD",
+      "week_end_date": "تاریخ پایان هفته به فرمت YYYY-MM-DD",
+      "description": "توضیح عملکرد هفتگی",
+      "transaction_count": عدد صحیح,
+      "net_profit": عدد اعشاری,
+      "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
+      "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
+      "best_trade": "نام نماد بهترین معامله",
+      "worst_trade": "نام نماد بدترین معامله",
+      "golden_window": "بازه‌ی زمانی طلایی معاملات آن هفته"
+    }}
+  ],
+  "suggested_exercises": [
+    {{ "text": "متن تمرین پیشنهادی" }}
+  ]
+}}
+"""
 
     ai_response = call_ai_model(ai_model, prompt)
 
@@ -207,6 +200,7 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
 
     return analysis
 
+
 @extend_schema(tags=["AI Analysis"])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -216,6 +210,7 @@ def ai_analysis_view(request):
         return Response({"error": "پورتفوی فعالی یافت نشد."}, status=404)
 
     analysis = AIAnalysis.objects.filter(portfolio=portfolio).order_by('-date').first()
+
     if analysis:
         serializer = AIAnalysisSerializer(analysis)
         return Response(serializer.data, status=200)
