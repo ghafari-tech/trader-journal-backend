@@ -71,7 +71,23 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
         for t in recent_trades
     ]
 
-    prompt = f"""
+    if not trades_data:
+        ai_response = {
+            "weekly_report": "هنوز معامله‌ای برای تحلیل ثبت نکرده‌ای. برای دریافت گزارش هوشمند، اولین معاملاتت را در ژورنال ثبت کن.",
+            "trading_regime": 0,
+            "capital_management": 0,
+            "psychology": 0,
+            "adherence_to_the_plan": 0,
+            "strengths": [],
+            "weaknesses": [],
+            "performance_days": [],
+            "performance_weeks": [],
+            "suggested_exercises": [
+                {"text": "امروز اولین معامله‌ات را با ثبت دلیل ورود، حد ضرر و حد سود در ژورنال ثبت کن."}
+            ]
+        }
+    else:
+        prompt = f"""
 تو یک تحلیلگر معاملاتی حرفه‌ای هستی. بر اساس داده‌های معاملات بسته‌شده‌ی زیر، یک تحلیل کامل به زبان فارسی ارائه بده.
 خروجی را دقیقاً به صورت یک JSON معتبر برگردان. هیچ متن اضافه‌ای بیرون از JSON ننویس.
 
@@ -129,8 +145,7 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
   ]
 }}
 """
-
-    ai_response = call_ai_model(ai_model, prompt)
+        ai_response = call_ai_model(ai_model, prompt)
 
     with transaction.atomic():
         analysis = AIAnalysis.objects.create(
