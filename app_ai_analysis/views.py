@@ -1,7 +1,9 @@
 import json
-import requests
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
+from google import genai
+from google.genai import types
+
 from app_ai_analysis.serializers import AIAnalysisSerializer
 from app_portfolio.models import Portfolio
 from app_transaction.models import Transaction
@@ -15,34 +17,26 @@ from rest_framework.response import Response
 
 
 def call_ai_model(ai_model, prompt):
-    base_url = (ai_model.url or "").rstrip("/")
-    if not base_url:
+    if not ai_model.url:
         raise ValueError("آدرس سرویس هوش مصنوعی تنظیم نشده است.")
+    if not ai_model.api_key:
+        raise ValueError("کلید API تنظیم نشده است.")
 
-    model_name = ai_model.model
-    url = f"{base_url}/v1beta/models/{model_name}:generateContent"
+    client = genai.Client(
+        api_key=ai_model.api_key,
+        http_options={"baseUrl": ai_model.url.rstrip("/")}
+    )
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-    if ai_model.api_key:
-        headers["x-goog-api-key"] = ai_model.api_key
+    response = client.models.generate_content(
+        model=ai_model.model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.3,
+        )
+    )
 
-    payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "generationConfig": {
-            "temperature": 0.3,
-            "responseMimeType": "application/json",
-        }
-    }
-
-    response = requests.post(url, headers=headers, json=payload, timeout=90)
-    response.raise_for_status()
-
-    data = response.json()
-    text_content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    text_content = (response.text or "").strip()
 
     if text_content.startswith("```"):
         text_content = text_content.split("```")[1]
