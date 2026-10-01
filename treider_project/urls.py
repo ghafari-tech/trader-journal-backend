@@ -42,6 +42,7 @@ urlpatterns = [
     path('app/achievements/', include('app_badge.urls')),
     path('app/user/', include('app_user.urls')),
     path('app/ai-coach/', include('app_ai_analysis.urls')),
+    path('payment/', include('app_payment.urls')),
     path(
         'api/schema/',
         SpectacularAPIView.as_view(),

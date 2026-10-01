@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'app_badge',
     'app_setting',
     'app_ai_analysis',
+    'app_payment',
 ]
 
 MIDDLEWARE = [
@@ -198,3 +199,12 @@ SPECTACULAR_SETTINGS = {
         {"name": "Authentication"},
     ],
 }
+
+
+ZARINPAL_MERCHANT = "00000000-0000-0000-0000-000000000000"
+ZARINPAL_URL_REQUEST = "https://sandbox.zarinpal.com/pg/v4/payment/request.json"
+ZARINPAL_URL_START_PAY = "https://sandbox.zarinpal.com/pg/StartPay/"
+ZARINPAL_URL_VERIFY = "https://sandbox.zarinpal.com/pg/v4/payment/verify.json"
+
+
+ZARINPAL_CALLBACK_URL = "http://127.0.0.1:8000/payment/verify/"
