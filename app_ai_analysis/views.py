@@ -17,9 +17,9 @@ from app_user.models import UserSubscription
 
 def call_ai_model(ai_model, prompt):
     if not ai_model.url:
-        raise ValueError("آدرس سرویس هوش مصنوعی تنظیم نشده است.")
+        raise ValueError("AI service URL is not configured.")
     if not ai_model.api_key:
-        raise ValueError("کلید API تنظیم نشده است.")
+        raise ValueError("API key is not configured.")
 
     client = genai.Client(
         api_key=ai_model.api_key,
@@ -51,7 +51,7 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
         ai_model = AIModel.objects.filter(is_default=True).first() or AIModel.objects.first()
 
     if not ai_model:
-        raise ValueError("مدل هوش مصنوعی یافت نشد.")
+        raise ValueError("No AI model found.")
 
     recent_trades = Transaction.objects.filter(
         portfolio=portfolio,
@@ -72,7 +72,7 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
 
     if not trades_data:
         ai_response = {
-            "weekly_report": "هنوز معامله‌ای برای تحلیل ثبت نکرده‌ای. برای دریافت گزارش هوشمند، اولین معاملاتت را در ژورنال ثبت کن.",
+            "weekly_report": "You haven't logged any trades for analysis yet. To receive an intelligent report, log your first trades in the journal.",
             "trading_regime": 0,
             "capital_management": 0,
             "psychology": 0,
@@ -82,65 +82,65 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
             "performance_days": [],
             "performance_weeks": [],
             "suggested_exercises": [
-                {"text": "امروز اولین معامله‌ات را با ثبت دلیل ورود، حد ضرر و حد سود در ژورنال ثبت کن."}
+                {"text": "Log your first trade today with entry reason, stop loss, and take profit in the journal."}
             ]
         }
     else:
         prompt = f"""
-تو یک تحلیلگر معاملاتی حرفه‌ای هستی. بر اساس داده‌های معاملات بسته‌شده‌ی زیر، یک تحلیل کامل به زبان فارسی ارائه بده.
-خروجی را دقیقاً به صورت یک JSON معتبر برگردان. هیچ متن اضافه‌ای بیرون از JSON ننویس.
+You are a professional trading analyst. Based on the closed trade data below, provide a complete analysis in English.
+Return the output exactly as a valid JSON. Do not write any text outside the JSON.
 
-داده‌های معاملات بسته‌شده:
+Closed trade data:
 {json.dumps(trades_data, ensure_ascii=False, indent=2)}
 
-ساختار JSON مورد نیاز:
+Required JSON structure:
 {{
-  "weekly_report": "متن گزارش هفتگی به فارسی",
-  "trading_regime": عدد صحیح بین ۰ تا ۱۰۰,
-  "capital_management": عدد صحیح بین ۰ تا ۱۰۰,
-  "psychology": عدد صحیح بین ۰ تا ۱۰۰,
-  "adherence_to_the_plan": عدد صحیح بین ۰ تا ۱۰۰,
+  "weekly_report": "Weekly report text in English",
+  "trading_regime": integer between 0 and 100,
+  "capital_management": integer between 0 and 100,
+  "psychology": integer between 0 and 100,
+  "adherence_to_the_plan": integer between 0 and 100,
   "strengths": [
     {{
-      "title": "عنوان نقطه قوت",
-      "maintaining_sustainability": "راهکار حفظ و تداوم این نقطه قوت"
+      "title": "Strength title",
+      "maintaining_sustainability": "How to maintain this strength"
     }}
   ],
   "weaknesses": [
     {{
-      "title": "عنوان نقطه ضعف",
-      "solution": "راهکار پیشنهادی برای رفع این نقطه ضعف"
+      "title": "Weakness title",
+      "solution": "Suggested solution for this weakness"
     }}
   ],
   "performance_days": [
     {{
-      "date": "تاریخ به فرمت YYYY-MM-DD",
-      "description": "توضیح عملکرد آن روز",
-      "transaction_count": عدد صحیح,
-      "net_profit": عدد اعشاری,
-      "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
-      "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
-      "best_trade": "نام نماد بهترین معامله",
-      "worst_trade": "نام نماد بدترین معامله",
-      "golden_window": "بازه‌ی زمانی طلایی معاملات آن روز"
+      "date": "Date in YYYY-MM-DD format",
+      "description": "Description of the day's performance",
+      "transaction_count": integer,
+      "net_profit": float,
+      "win_rate": float between 0 and 100,
+      "adherence_to_the_plan": float between 0 and 100,
+      "best_trade": "Best trade symbol name",
+      "worst_trade": "Worst trade symbol name",
+      "golden_window": "Golden time window of that day's trades"
     }}
   ],
   "performance_weeks": [
     {{
-      "week_start_date": "تاریخ شروع هفته به فرمت YYYY-MM-DD",
-      "week_end_date": "تاریخ پایان هفته به فرمت YYYY-MM-DD",
-      "description": "توضیح عملکرد هفتگی",
-      "transaction_count": عدد صحیح,
-      "net_profit": عدد اعشاری,
-      "win_rate": عدد اعشاری بین ۰ تا ۱۰۰,
-      "adherence_to_the_plan": عدد اعشاری بین ۰ تا ۱۰۰,
-      "best_trade": "نام نماد بهترین معامله",
-      "worst_trade": "نام نماد بدترین معامله",
-      "golden_window": "بازه‌ی زمانی طلایی معاملات آن هفته"
+      "week_start_date": "Week start date in YYYY-MM-DD format",
+      "week_end_date": "Week end date in YYYY-MM-DD format",
+      "description": "Weekly performance description",
+      "transaction_count": integer,
+      "net_profit": float,
+      "win_rate": float between 0 and 100,
+      "adherence_to_the_plan": float between 0 and 100,
+      "best_trade": "Best trade symbol name",
+      "worst_trade": "Worst trade symbol name",
+      "golden_window": "Golden time window of that week's trades"
     }}
   ],
   "suggested_exercises": [
-    {{ "text": "متن تمرین پیشنهادی" }}
+    {{ "text": "Suggested exercise text" }}
   ]
 }}
 """
@@ -244,7 +244,7 @@ def _resolve_plan(user):
 def ai_analysis_view(request):
     portfolio = Portfolio.objects.filter(user=request.user, is_active=True).first()
     if not portfolio:
-        return Response({"error": "پورتفوی فعالی یافت نشد."}, status=404)
+        return Response({"error": "No active portfolio found."}, status=404)
 
     analysis = AIAnalysis.objects.filter(portfolio=portfolio).order_by("-date").first()
     if analysis:
@@ -253,7 +253,7 @@ def ai_analysis_view(request):
     try:
         default_model = AIModel.objects.filter(is_default=True).first()
         if not default_model:
-            return Response({"error": "مدل پیش‌فرض هوش مصنوعی یافت نشد."}, status=400)
+            return Response({"error": "Default AI model not found."}, status=400)
 
         with transaction.atomic():
             AIAnalysisRequest.objects.create(
@@ -284,7 +284,7 @@ def ai_models_list_view(request):
 def regenerate_ai_analysis_view(request):
     portfolio = Portfolio.objects.filter(user=request.user, is_active=True).first()
     if not portfolio:
-        return Response({"error": "پورتفوی فعالی یافت نشد."}, status=404)
+        return Response({"error": "No active portfolio found."}, status=404)
 
     plan = _resolve_plan(request.user)
     daily_limit = PLAN_DAILY_LIMITS.get(plan, 1)
@@ -298,7 +298,7 @@ def regenerate_ai_analysis_view(request):
     if used_today >= daily_limit:
         return Response(
             {
-                "error": "سهمیه امروز شما به پایان رسیده است.",
+                "error": "Your daily quota has been exhausted.",
                 "plan": plan,
                 "limit": daily_limit,
                 "used": used_today,
@@ -310,11 +310,11 @@ def regenerate_ai_analysis_view(request):
     if model_id:
         ai_model = AIModel.objects.filter(id=model_id).first()
         if not ai_model:
-            return Response({"error": "مدل انتخابی یافت نشد."}, status=404)
+            return Response({"error": "Selected model not found."}, status=404)
     else:
         ai_model = AIModel.objects.filter(is_default=True).first()
         if not ai_model:
-            return Response({"error": "مدل پیش‌فرض هوش مصنوعی یافت نشد."}, status=400)
+            return Response({"error": "Default AI model not found."}, status=400)
 
     try:
         with transaction.atomic():
@@ -330,7 +330,7 @@ def regenerate_ai_analysis_view(request):
 
     return Response(
         {
-            "analysis": AIAnalysisSerializer(analysis).data,
+            "message": "AI analysis regenerated successfully.",
             "plan": plan,
             "limit": daily_limit,
             "used": used_today + 1,
