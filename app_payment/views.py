@@ -136,6 +136,13 @@ def verify_payment(request):
 			},
 			timeout=GATEWAY_TIMEOUT_SECONDS,
 		)
+		if not gateway_response.ok:
+			logger.error(
+				'Zarinpal payment request HTTP %s response: %s',
+				gateway_response.status_code,
+				gateway_response.text[:2000],
+			)
+			
 		gateway_response.raise_for_status()
 		gateway_data = gateway_response.json().get('data', {})
 	except (requests.RequestException, ValueError, AttributeError):
@@ -153,13 +160,6 @@ def verify_payment(request):
 				'message': 'Zarinpal did not verify the payment.',
 			},
 			status=400,
-		)
-
-	if not gateway_response.ok:
-		logger.error(
-			'Zarinpal HTTP %s response: %s',
-			gateway_response.status_code,
-			gateway_response.text[:2000],
 		)
 
 	today = timezone.localdate()
