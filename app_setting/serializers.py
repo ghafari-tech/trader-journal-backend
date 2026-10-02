@@ -11,7 +11,7 @@ class UserPlanSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'user',
-            'type_display',
+            'type.name',
             'start_date',
             'end_date',
         ]
