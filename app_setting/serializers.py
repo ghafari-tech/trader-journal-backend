@@ -4,14 +4,15 @@ from app_notification.models import NotificationSettings
 from app_user.models import UserSubscription, User
 
 class UserPlanSerializer(serializers.ModelSerializer):
-    type_display = serializers.CharField(source='get_type_display', read_only=True)
+    type_name = serializers.CharField(source='type.name', read_only=True)
 
     class Meta:
         model = UserSubscription
         fields = [
             'id',
             'user',
-            'type.name',
+            'type',
+            'type_name',
             'start_date',
             'end_date',
         ]
