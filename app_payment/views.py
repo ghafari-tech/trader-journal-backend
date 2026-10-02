@@ -155,6 +155,13 @@ def verify_payment(request):
 			status=400,
 		)
 
+	if not gateway_response.ok:
+		logger.error(
+			'Zarinpal HTTP %s response: %s',
+			gateway_response.status_code,
+			gateway_response.text[:2000],
+		)
+
 	today = timezone.localdate()
 	with transaction.atomic():
 		payment = Payment.objects.select_for_update().get(pk=payment.pk)
