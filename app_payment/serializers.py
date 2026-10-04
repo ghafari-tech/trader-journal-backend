@@ -7,12 +7,20 @@ class PaymentRequestSerializer(serializers.Serializer):
     subscription_id = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.all(),
     )
+    discount_code = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=50,
+    )
 
 
 class PaymentRequestResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
     authority = serializers.CharField()
     payment_url = serializers.URLField()
+    original_amount = serializers.IntegerField()
+    amount = serializers.IntegerField()
+    discount_amount = serializers.IntegerField()
 
 
 class PaymentVerifyResponseSerializer(serializers.Serializer):
