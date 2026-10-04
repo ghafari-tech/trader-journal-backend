@@ -16,10 +16,11 @@ from app_user.models import User, UserSubscription
 @permission_classes([IsAuthenticated, IsAdminUser])
 def users_list(request):
     users = User.objects.all()
+    subscription_free = Subscription.objects.filter(name='Free').first()
 
     for user in users:
         if not hasattr(user, "plan"):
-            UserSubscription.objects.create(user=user, type__name='Free')
+            UserSubscription.objects.create(user=user, type=subscription_free)
 
     serializer = UserAdminSerializer(users, many=True)
 
@@ -32,7 +33,7 @@ def users_list(request):
 @permission_classes([IsAuthenticated, IsAdminUser])
 def admin_main(request):
     users_count = User.objects.all().count()
-    subscriptions_count = UserSubscription.objects.exclude(type='').count()
+    subscriptions_count = UserSubscription.objects.exclude(type=None).count()
     income_monthly = 0
     api_calls = 0
 
