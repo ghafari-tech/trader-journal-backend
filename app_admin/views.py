@@ -19,7 +19,7 @@ def users_list(request):
 
     for user in users:
         if not hasattr(user, "plan"):
-            UserSubscription.objects.create(user=user)
+            UserSubscription.objects.create(user=user, type='Free')
 
     serializer = UserAdminSerializer(users, many=True)
 
