@@ -72,7 +72,10 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
 
     if not trades_data:
         ai_response = {
-            "weekly_report": "You haven't logged any trades for analysis yet. To receive an intelligent report, log your first trades in the journal.",
+            "weekly_report": (
+                "هنوز معامله‌ای برای تحلیل ثبت نکرده‌اید. "
+                "برای دریافت گزارش هوشمند، اولین معاملات خود را در ژورنال ثبت کنید."
+            ),
             "trading_regime": 0,
             "capital_management": 0,
             "psychology": 0,
@@ -82,68 +85,107 @@ def generate_and_save_ai_analysis(portfolio, ai_model=None):
             "performance_days": [],
             "performance_weeks": [],
             "suggested_exercises": [
-                {"text": "Log your first trade today with entry reason, stop loss, and take profit in the journal."}
-            ]
+                {
+                    "text": (
+                        "امروز اولین معامله خود را همراه با دلیل ورود، "
+                        "حد ضرر و حد سود در ژورنال ثبت کنید."
+                    )
+                }
+            ],
         }
     else:
         prompt = f"""
-You are a professional trading analyst. Based on the closed trade data below, provide a complete analysis in English.
-Return the output exactly as a valid JSON. Do not write any text outside the JSON.
+            You are a professional trading analyst. Based on the closed trade data below, 
+            provide a complete analysis.
+            Return ONLY valid JSON. Do NOT write any text outside the JSON.
 
-Closed trade data:
-{json.dumps(trades_data, ensure_ascii=False, indent=2)}
+            ================ LANGUAGE RULES (STRICT) ================
+            1) ALL human-readable text values MUST be written in Persian (Farsi):
+            - weekly_report
+            - strengths[].title, strengths[].maintaining_sustainability
+            - weaknesses[].title, weaknesses[].solution
+            - performance_days[].description, performance_days[].golden_window
+            - performance_weeks[].description, performance_weeks[].golden_window
+            - suggested_exercises[].text
 
-Required JSON structure:
-{{
-  "weekly_report": "Weekly report text in English",
-  "trading_regime": integer between 0 and 100,
-  "capital_management": integer between 0 and 100,
-  "psychology": integer between 0 and 100,
-  "adherence_to_the_plan": integer between 0 and 100,
-  "strengths": [
-    {{
-      "title": "Strength title",
-      "maintaining_sustainability": "How to maintain this strength"
-    }}
-  ],
-  "weaknesses": [
-    {{
-      "title": "Weakness title",
-      "solution": "Suggested solution for this weakness"
-    }}
-  ],
-  "performance_days": [
-    {{
-      "date": "Date in YYYY-MM-DD format",
-      "description": "Description of the day's performance",
-      "transaction_count": integer,
-      "net_profit": float,
-      "win_rate": float between 0 and 100,
-      "adherence_to_the_plan": float between 0 and 100,
-      "best_trade": "Best trade symbol name",
-      "worst_trade": "Worst trade symbol name",
-      "golden_window": "Golden time window of that day's trades"
-    }}
-  ],
-  "performance_weeks": [
-    {{
-      "week_start_date": "Week start date in YYYY-MM-DD format",
-      "week_end_date": "Week end date in YYYY-MM-DD format",
-      "description": "Weekly performance description",
-      "transaction_count": integer,
-      "net_profit": float,
-      "win_rate": float between 0 and 100,
-      "adherence_to_the_plan": float between 0 and 100,
-      "best_trade": "Best trade symbol name",
-      "worst_trade": "Worst trade symbol name",
-      "golden_window": "Golden time window of that week's trades"
-    }}
-  ],
-  "suggested_exercises": [
-    {{ "text": "Suggested exercise text" }}
-  ]
-}}
-"""
+            2) NUMERIC fields MUST remain raw numbers (NO strings, NO Persian digits):
+            - trading_regime, capital_management, psychology, adherence_to_the_plan
+            - transaction_count, net_profit, win_rate
+            Example: 75  (correct)  /  "۷۵"  (WRONG)
+
+            3) DATE fields MUST stay in Gregorian "YYYY-MM-DD" format:
+            - date, week_start_date, week_end_date
+            Example: "2026-10-04"  (correct)  /  "۱۴۰۵/۰۷/۱۲"  (WRONG)
+
+            4) Trading symbols in best_trade / worst_trade MUST stay in original Latin
+            form (e.g. "EURUSD", "XAUUSD", "BTCUSD"). You may optionally append a
+            short Persian label in parentheses, e.g. "EURUSD (یورو/دلار)".
+            Do NOT translate the symbol itself.
+
+            5) JSON keys MUST remain exactly in English as shown in the template below.
+            =========================================================
+
+            Closed trade data:
+            {json.dumps(trades_data, ensure_ascii=False, indent=2)}
+
+            Required JSON structure:
+            {{
+            "weekly_report": "گزارش هفتگی به فارسی",
+            "trading_regime": integer between 0 and 100,
+            "capital_management": integer between 0 and 100,
+            "psychology": integer between 0 and 100,
+            "adherence_to_the_plan": integer between 0 and 100,
+            "strengths": [
+                {{
+                "title": "عنوان نقطه قوت به فارسی",
+                "maintaining_sustainability": "روش حفظ این نقطه قوت به فارسی"
+                }}
+            ],
+            "weaknesses": [
+                {{
+                "title": "عنوان نقطه ضعف به فارسی",
+                "solution": "راه‌حل پیشنهادی به فارسی"
+                }}
+            ],
+            "performance_days": [
+                {{
+                "date": "YYYY-MM-DD",
+                "description": "توضیح عملکرد آن روز به فارسی",
+                "transaction_count": integer,
+                "net_profit": float,
+                "win_rate": float between 0 and 100,
+                "adherence_to_the_plan": float between 0 and 100,
+                "best_trade": "EURUSD",
+                "worst_trade": "GBPUSD",
+                "golden_window": "بازه طلایی معاملات آن روز به فارسی"
+                }}
+            ],
+            "performance_weeks": [
+                {{
+                "week_start_date": "YYYY-MM-DD",
+                "week_end_date": "YYYY-MM-DD",
+                "description": "توضیح عملکرد هفته به فارسی",
+                "transaction_count": integer,
+                "net_profit": float,
+                "win_rate": float between 0 and 100,
+                "adherence_to_the_plan": float between 0 and 100,
+                "best_trade": "EURUSD",
+                "worst_trade": "GBPUSD",
+                "golden_window": "بازه طلایی معاملات آن هفته به فارسی"
+                }}
+            ],
+            "suggested_exercises": [
+                {{ "text": "متن تمرین پیشنهادی به فارسی" }}
+            ]
+            }}
+
+            Final reminder:
+            - Persian for all text.
+            - Numbers stay numbers.
+            - Dates stay YYYY-MM-DD.
+            - Symbols stay in Latin.
+            - JSON keys stay in English.
+        """
         ai_response = call_ai_model(ai_model, prompt)
 
     with transaction.atomic():
