@@ -25,6 +25,22 @@ def user_info(request):
     serializer = UserInfoSerializer(request.user)
     return Response(serializer.data)
 
+@extend_schema(tags=['Settings'], request=UpdateUserInfoSerializer)
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_user_info(request):
+    partial = request.method == 'PATCH'
+    serializer = UpdateUserInfoSerializer(
+        request.user,
+        data=request.data,
+        partial=partial,
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    return Response(UserInfoSerializer(request.user).data, status=200)
+
+
 @extend_schema(tags=['Settings'])
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
