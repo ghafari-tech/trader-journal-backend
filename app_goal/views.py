@@ -105,7 +105,7 @@ def edit_goal(request, pk):
 def delete_goal(request, pk):
     goal = get_object_or_404(Goal, pk=pk)
 
-    if goal.user != request.user:
+    if goal.portfolio.user != request.user:
         return Response({
             'message': 'You do not have permission to delete this goal.'
         }, status=403)
