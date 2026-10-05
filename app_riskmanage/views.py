@@ -18,6 +18,9 @@ def risk_management_show(request):
         is_active=True
     ).first()
 
+    if not portfolio:
+        return Response({'detail': 'No active portfolio found'}, status=404)
+
     risk_manage, created = RiskManagement.objects.get_or_create(
         portfolio=portfolio,
     )
@@ -32,17 +35,20 @@ def risk_management_show(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def edit_risk_management(request):
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
+
+    if not portfolio:
+        return Response({'detail': 'No active portfolio found'}, status=404)
+
     max_risk = request.data.get('max_risk')
     max_loss_daily = request.data.get('max_loss_daily')
     max_loss_weekly = request.data.get('max_loss_weekly')
     max_transaction_daily = request.data.get('max_transaction_daily')
     max_consecutive_loss = request.data.get('max_consecutive_loss')
     min_r_r = request.data.get('min_r_r')
-
-    portfolio = Portfolio.objects.filter(
-        user=request.user,
-        is_active=True
-    ).first()
 
     risk_manage, created = RiskManagement.objects.get_or_create(
         portfolio=portfolio,

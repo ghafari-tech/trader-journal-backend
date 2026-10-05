@@ -20,6 +20,8 @@ def journal_list(request):
         user=request.user,
         is_active=True
     ).first()
+    if not portfolio:
+        return Response({'message': 'No active portfolio found'}, status=404)
     journals = Journal.objects.filter(portfolio=portfolio)
 
     serializer = JournalSerializer(journals, many=True)
@@ -32,17 +34,20 @@ def journal_list(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_journal(request):
+    portfolio = Portfolio.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
+
+    if not portfolio:
+        return Response({'message': 'No active portfolio found'}, status=404)
+
     title = request.data.get('title')
     transaction_id = request.data.get('transaction_id', None)
     feel = request.data.get('feel')
     mistakes = request.data.get('mistakes')
     lesson_learned = request.data.get('lesson_learned')
     followed_plan = request.data.get('followed_plan')
-
-    portfolio = Portfolio.objects.filter(
-        user=request.user,
-        is_active=True
-    ).first()
 
     if transaction_id:
         if not transaction_id.startswith('T-'):

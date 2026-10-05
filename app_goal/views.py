@@ -15,6 +15,8 @@ def goal_list(request):
         user=request.user,
         is_active=True,
     ).first()
+    if not portfolio:
+        return Response({'message': 'No active portfolio found'}, status=404)
     goals = Goal.objects.filter(portfolio=portfolio)
 
     serializer = GoalSerializer(goals, many=True)
@@ -27,15 +29,18 @@ def goal_list(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_goal(request):
-    title = request.data.get('title')
-    target_type = request.data.get('target_type')
-    target_value = request.data.get('target_value')
-    deadline = request.data.get('deadline')
-
     portfolio = Portfolio.objects.filter(
         user=request.user,
         is_active=True
     ).first()
+
+    if not portfolio:
+        return Response({'message': 'No active portfolio found'}, status=404)
+
+    title = request.data.get('title')
+    target_type = request.data.get('target_type')
+    target_value = request.data.get('target_value')
+    deadline = request.data.get('deadline')
 
     valid_type = [
         "profit",
