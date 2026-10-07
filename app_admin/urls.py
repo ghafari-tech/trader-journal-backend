@@ -9,4 +9,6 @@ urlpatterns = [
     path('pays/', views.pays_list, name='pays_list'),
     path('subscriptions/', views.subscriptions_list, name='subscriptions_list'),
     path('subscriptions/update/<int:pk>/', views.update_subscription, name='subscriptions_update'),
+    path('ai-models/', views.ai_models_list, name='ai_models_list'),
+    path('ai-models/add/', views.ai_model_create, name='ai_model_create'),
 ]

@@ -1,5 +1,6 @@
 import json
 from django.db import transaction
+from django.db.models import F
 from drf_spectacular.utils import extend_schema
 from google import genai
 from google.genai import types
@@ -13,6 +14,48 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 from app_user.models import UserSubscription
+
+
+def _to_int(value):
+    """Safely coerce a value (possibly None or a mock) to int."""
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def extract_total_tokens(usage):
+    """Return the total tokens consumed by a generation call.
+
+    Prefers ``total_token_count``; if it is missing or zero, falls back to
+    ``prompt_token_count + candidates_token_count``.
+    """
+    if usage is None:
+        return 0
+
+    total = _to_int(getattr(usage, "total_token_count", 0))
+    if total > 0:
+        return total
+
+    prompt_tokens = _to_int(getattr(usage, "prompt_token_count", 0))
+    candidates_tokens = _to_int(getattr(usage, "candidates_token_count", 0))
+    return prompt_tokens + candidates_tokens
+
+
+def record_token_usage(ai_model, usage):
+    """Atomically add the consumed tokens to the given AI model.
+
+    Returns the number of tokens that were recorded (0 if unknown).
+    """
+    tokens = extract_total_tokens(usage)
+    if tokens <= 0:
+        return 0
+
+    AIModel.objects.filter(pk=ai_model.pk).update(
+        used_tokens=F("used_tokens") + tokens
+    )
+    ai_model.refresh_from_db(fields=["used_tokens"])
+    return tokens
 
 
 def call_ai_model(ai_model, prompt):
@@ -34,6 +77,10 @@ def call_ai_model(ai_model, prompt):
             temperature=0.3,
         )
     )
+
+    # Record token usage on the model that actually served the request
+    # (either the user-selected model or the default one).
+    record_token_usage(ai_model, getattr(response, "usage_metadata", None))
 
     text_content = (response.text or "").strip()
 

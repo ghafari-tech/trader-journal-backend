@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from app_admin.models import Api_Ai
+from app_ai_analysis.models import AIModel
 from app_setting.models import Subscription, SubscriptionFeature
 from app_user.models import User
 
@@ -84,3 +85,19 @@ class ApiSerializer(serializers.Serializer):
     class Meta:
         model = Api_Ai
         fields = "__all__"
+
+
+class AIModelAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIModel
+        fields = [
+            "id",
+            "name",
+            "model",
+            "description",
+            "api_key",
+            "url",
+            "is_default",
+            "used_tokens",
+        ]
+        read_only_fields = ["id", "used_tokens"]

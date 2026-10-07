@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 
 from app_setting.models import Subscription
+from app_ai_analysis.models import AIModel
 from treider_project import settings
 from .models import Api_Ai
 from .serializers import *
@@ -102,5 +103,40 @@ def apis_list(request):
     return Response({
         'apis': serializers.data,
     })
+
+
+@extend_schema(tags=["Admin"], responses=AIModelAdminSerializer(many=True))
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def ai_models_list(request):
+    ai_models = AIModel.objects.all().order_by("id")
+    serializer = AIModelAdminSerializer(ai_models, many=True)
+
+    return Response({
+        'ai_models': serializer.data,
+    }, status=200)
+
+
+@extend_schema(
+    tags=["Admin"],
+    request=AIModelAdminSerializer,
+    responses={201: AIModelAdminSerializer},
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def ai_model_create(request):
+    serializer = AIModelAdminSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    ai_model = serializer.save()
+
+    return Response(
+        {
+            "message": "AI model created successfully.",
+            "ai_model": AIModelAdminSerializer(ai_model).data,
+        },
+        status=201,
+    )
+
 
 

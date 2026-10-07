@@ -9,6 +9,10 @@ class AIModel(models.Model):
     api_key = models.CharField(max_length=200)
     url = models.URLField(max_length=200, blank=True, null=True)
     is_default = models.BooleanField(default=False)
+    used_tokens = models.PositiveBigIntegerField(
+        default=0,
+        help_text="Cumulative number of tokens consumed by this model.",
+    )
     
 
 class AIAnalysis(models.Model):
