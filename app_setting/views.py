@@ -314,7 +314,7 @@ def update_notification_setting(request):
 
 
 @extend_schema(tags=["Settings"])
-@api_view(["PATCH"])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def plan_list(request):
     plans = Subscription.objects.all()
