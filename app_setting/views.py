@@ -2,6 +2,7 @@ from drf_spectacular.utils import extend_schema
 from django.utils import timezone
 from app_notification.models import NotificationSettings
 from app_portfolio.models import Portfolio
+from app_setting.models import Subscription
 from app_transaction.authentication import MetaTraderApiKeyAuthentication
 from .serializers import *
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -310,3 +311,16 @@ def update_notification_setting(request):
             "field": field,
             "value": value,
         },status=200)
+
+
+@extend_schema(tags=["Settings"])
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def plan_list(request):
+    plans = Subscription.objects.all()
+
+    serializers = PlanListSerializer(plans, many=True)
+
+    return Response({
+        "plans": serializers.data,
+    }, status=200)

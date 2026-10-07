@@ -5,6 +5,7 @@ urlpatterns = [
     path('user-info/', views.user_info, name='user_info'),
     path('update/', views.update_user_info, name='update_user_info'),
     path('plan/', views.user_plan_info, name='user_plan_info'),
+    path('plans/', views.plan_list, name='plan_list'),
     path('metatrader/connect/', views.metatrader_connect, name='metatrader_connect'),
     path('metatrader/mt-status/', views.metatrader_status, name='metatrader_status'),
     path('metatrader/heartbeat/', views.metatrader_heartbeat, name='metatrader_heartbeat'),

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from app_notification.models import NotificationSettings
+from app_setting.models import Subscription
 from app_user.models import UserSubscription, User
 
 class UserPlanSerializer(serializers.ModelSerializer):
@@ -77,3 +78,9 @@ class UpdateNotificationSettingsSerializer(serializers.Serializer):
         ]
     )
     value = serializers.BooleanField()
+
+
+class PlanListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscription
+        fields = "__all__"

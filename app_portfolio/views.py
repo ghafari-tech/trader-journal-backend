@@ -99,8 +99,9 @@ def portfolio_delete(request, pk):
 
     if portfolio.is_active:
         porto = Portfolio.objects.filter(user=request.user, is_archived=False).order_by('created_at').first()
-        porto.is_active = True
-        porto.save()
+        if porto:
+            porto.is_active = True
+            porto.save()
 
     return Response({
         'message': 'Portfolio deleted successfully'
