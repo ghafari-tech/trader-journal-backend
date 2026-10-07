@@ -47,6 +47,7 @@ def portfolio_create(request):
 
     if not Portfolio.objects.filter(user=request.user, is_active=True).exists():
         portfolio.is_active = True
+        portfolio.save(update_fields=['is_active'])
 
     return Response({
         'message': 'Portfolio created successfully',
@@ -117,13 +118,21 @@ def portfolio_archive(request, pk):
         user=request.user
     )
 
-    portfolio.is_archived = True
-    portfolio.save(update_fields=['is_archived'])
+    was_active = portfolio.is_active
 
-    if portfolio.is_active:
-        porto = Portfolio.objects.filter(user=request.user, is_archived=True).order_by('created_at').first()
-        porto.is_active = True
-        porto.save()
+    portfolio.is_archived = True
+    portfolio.is_active = False
+    portfolio.save(update_fields=['is_archived', 'is_active'])
+
+    if was_active:
+        porto = Portfolio.objects.filter(
+            user=request.user,
+            is_archived=False,
+        ).order_by('created_at').first()
+
+        if porto:
+            porto.is_active = True
+            porto.save(update_fields=['is_active'])
 
     return Response({
         'message': 'Portfolio archived successfully'
@@ -158,8 +167,12 @@ def archive_out_portfolio(request, pk):
         }, status=403)
 
     portfolio.is_archived = False
-    portfolio.save()
+    portfolio.save(update_fields=['is_archived'])
+
+    if not Portfolio.objects.filter(user=request.user, is_active=True).exists():
+        portfolio.is_active = True
+        portfolio.save(update_fields=['is_active'])
 
     return Response({
-        'message': 'Portfolio archived successfully',
+        'message': 'Portfolio un-archived successfully',
     }, status=201)

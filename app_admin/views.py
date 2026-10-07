@@ -67,7 +67,7 @@ def subscriptions_list(request):
     request=SubscriptionSerializer,
 )
 @api_view(["PATCH"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def update_subscription(request, pk):
     subscription = get_object_or_404(
         Subscription,

@@ -49,7 +49,14 @@ def user_plan_info(request):
     plan = UserSubscription.objects.filter(user=request.user).first()
 
     if not plan:
-        plan = UserSubscription.objects.create(user=request.user)
+        free_subscription = Subscription.objects.filter(name='Free').first()
+        if free_subscription is None:
+            free_subscription = Subscription.objects.create(name='Free', price=0)
+
+        plan = UserSubscription.objects.create(
+            user=request.user,
+            type=free_subscription,
+        )
 
     serializer = UserPlanSerializer(plan)
 
@@ -85,6 +92,12 @@ def metatrader_status(request):
         user=request.user,
         is_active=True
     ).first()
+
+    if portfolio is None:
+        return Response(
+            {'detail': 'No active portfolio found.'},
+            status=404,
+        )
 
     account, _ = MetaTraderAccount.objects.get_or_create(
         portfolio=portfolio

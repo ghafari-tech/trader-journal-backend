@@ -1,5 +1,4 @@
 from django.contrib.auth import authenticate
-from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
 from app_portfolio.models import Portfolio
 from app_portfolio.views import portfolio_archive_list
@@ -51,7 +50,7 @@ def add_journal(request):
 
     if transaction_id:
         if not transaction_id.startswith('T-'):
-            return JsonResponse({
+            return Response({
                 'success': False,
                 'message': 'Transaction ID must start with T-.',
                 'transaction_id': transaction_id
@@ -59,7 +58,7 @@ def add_journal(request):
 
         transaction = Transaction.objects.filter(transaction_id=transaction_id, portfolio__user=request.user).first()
         if not transaction:
-            return JsonResponse({
+            return Response({
                 'success': False,
                 'message': 'Transaction does not exist.'
             }, status=400)
@@ -75,15 +74,21 @@ def add_journal(request):
         "revenge"
     ]
 
-    if not title or not feel or not mistakes or not lesson_learned or not followed_plan:
-        return JsonResponse({
+    if (
+        title is None
+        or feel is None
+        or mistakes is None
+        or lesson_learned is None
+        or followed_plan is None
+    ):
+        return Response({
             'success': False,
             'message': 'Please fill in all the required fields.'
         }, status=400)
 
 
     if feel not in valid_feels:
-        return JsonResponse({
+        return Response({
             'success': False,
             'message': 'Feel free to choose one of the following.'
         }, status=400)
@@ -98,7 +103,7 @@ def add_journal(request):
         lesson_learned=lesson_learned,
         followed_plan=followed_plan,
     )
-    return JsonResponse({
+    return Response({
         'success': True,
         'journal_id': journal.id,
         'message': 'Journal created'

@@ -270,12 +270,10 @@ def _resolve_plan(user):
 
     subscription = sub.type
     name = (getattr(subscription, "name", "") or "").lower()
-    code = (getattr(subscription, "type", "") or "").lower()
-    value = code or name
 
-    if "max" in value:
+    if "max" in name:
         return "pro_max"
-    if "pro" in value:
+    if "pro" in name:
         return "pro"
     return "free"
 
@@ -348,7 +346,7 @@ def regenerate_ai_analysis_view(request):
             status=429,
         )
 
-    model_id = request.data.get("model_id")
+    model_id = request.data.get("model_id") or request.data.get("models_id")
     if model_id:
         ai_model = AIModel.objects.filter(id=model_id).first()
         if not ai_model:

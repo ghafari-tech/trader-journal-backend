@@ -128,8 +128,8 @@ def look_risk_management(request):
     else:
         max_risk_in_day = Decimal("0")
 
-    week_start = today
-    week_end = today + timedelta(days=7)
+    week_start = today - timedelta(days=6)
+    week_end = today + timedelta(days=1)
 
     transactions_in_week = Transaction.objects.filter(
         portfolio=portfolio,

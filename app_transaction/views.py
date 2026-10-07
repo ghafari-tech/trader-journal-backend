@@ -13,7 +13,7 @@ from app_transaction.models import MetaTraderAccount
 from bs4 import BeautifulSoup
 import re
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, time
 from django.utils import timezone
 from rest_framework.parsers import MultiPartParser, FormParser
 
@@ -48,9 +48,9 @@ def transaction_list(request):
         many=True
     )
 
-    return paginator.get_paginated_response({
-        "transactions": serializer.data
-    })
+    response = paginator.get_paginated_response(serializer.data)
+    response.data["transactions"] = response.data.pop("results")
+    return response
 
 
 @extend_schema(tags=["Transaction"])
@@ -89,8 +89,12 @@ def transaction_calendar(request, year, month):
             1
         )
 
-    first_day_gregorian = first_day_jalali.togregorian()
-    next_month_gregorian = next_month_jalali.togregorian()
+    first_day_gregorian = timezone.make_aware(
+        datetime.combine(first_day_jalali.togregorian(), time.min)
+    )
+    next_month_gregorian = timezone.make_aware(
+        datetime.combine(next_month_jalali.togregorian(), time.min)
+    )
 
     portfolio = Portfolio.objects.filter(
         user=request.user,

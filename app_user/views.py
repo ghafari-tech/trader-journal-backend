@@ -74,7 +74,10 @@ def register(request):
             password=password,
         )
 
-        subscription = Subscription.objects.get(name='Free')
+        subscription, _ = Subscription.objects.get_or_create(
+            name='Free',
+            defaults={'price': 0},
+        )
 
         UserSubscription.objects.create(
             user=user,

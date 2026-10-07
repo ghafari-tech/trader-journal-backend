@@ -77,7 +77,13 @@ def add_goal(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def edit_goal(request, pk):
-    goal = Goal.objects.get(pk=pk)
+    goal = get_object_or_404(Goal, pk=pk)
+
+    if goal.portfolio.user != request.user:
+        return Response({
+            'message': 'You do not have permission to edit this goal.'
+        }, status=403)
+
     title = request.data.get('title')
     target_type = request.data.get('target_type')
     target_value = request.data.get('target_value')

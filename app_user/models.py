@@ -49,7 +49,10 @@ class UserManager(BaseUserManager):
         )
 
 class User(AbstractUser):
-    image_profile = models.ImageField()
+    image_profile = models.ImageField(
+        null=True,
+        blank=True,
+    )
 
     phone = models.CharField(
         max_length=11,
@@ -108,5 +111,5 @@ class EmailVerificationCode(models.Model):
 class UserSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="plan")
     type = models.ForeignKey(Subscription, on_delete=models.CASCADE, related_name="user_subscriptions")
-    start_date = models.DateField(default=timezone.now)
+    start_date = models.DateField(default=timezone.localdate)
     end_date = models.DateField(null=True, blank=True)

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from django.utils import timezone
 from decimal import Decimal
 from rest_framework.response import Response
@@ -354,8 +354,12 @@ def monthly_performance(request):
                 1
             )
 
-        start_date = start_jalali.togregorian()
-        next_month_date = next_month_jalali.togregorian()
+        start_date = timezone.make_aware(
+            datetime.combine(start_jalali.togregorian(), time.min)
+        )
+        next_month_date = timezone.make_aware(
+            datetime.combine(next_month_jalali.togregorian(), time.min)
+        )
 
         monthly_transactions = transactions.filter(
             closed_at__gte=start_date,
