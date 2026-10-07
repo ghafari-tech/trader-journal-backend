@@ -45,6 +45,25 @@ class TransactionTests(TestCase):
         t = self._tx(exit_price=Decimal('1.11000000'))
         self.assertIsNotNone(t.total_reward)
 
+    def test_create_transaction_via_post(self):
+        resp = self.client.post('/app/trades/', {
+            'symbol': 'EURUSD',
+            'transaction_type': 'buy',
+            'entry_price': '1.10000000',
+            'volume': '0.10000000',
+        }, format='json')
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertTrue(Transaction.objects.filter(portfolio=self.portfolio).exists())
+
+    def test_create_transaction_without_active_portfolio(self):
+        self.portfolio.is_active = False
+        self.portfolio.save(update_fields=['is_active'])
+        resp = self.client.post('/app/trades/', {
+            'symbol': 'EURUSD', 'transaction_type': 'buy',
+            'entry_price': '1.10000000', 'volume': '0.10000000',
+        }, format='json')
+        self.assertEqual(resp.status_code, 404)
+
     def test_transaction_list_requires_active_portfolio(self):
         self.portfolio.is_active = False
         self.portfolio.save(update_fields=['is_active'])

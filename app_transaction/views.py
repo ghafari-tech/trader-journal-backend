@@ -19,7 +19,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 
 @extend_schema(tags=["Transaction"])
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
     portfolio = Portfolio.objects.filter(
@@ -31,6 +31,20 @@ def transaction_list(request):
         return Response({
             'detail': 'No portfolio found',
         }, status=404)
+
+    if request.method == 'POST':
+        serializer = AddTransactionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        transaction = serializer.save(portfolio=portfolio)
+
+        return Response(
+            {
+                'message': 'Transaction created successfully',
+                'transaction': TransactionSerializer(transaction).data,
+            },
+            status=201,
+        )
 
     transactions = Transaction.objects.filter(
         portfolio=portfolio,
