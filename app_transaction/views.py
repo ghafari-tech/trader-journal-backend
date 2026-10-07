@@ -12,10 +12,36 @@ from .pagination import TransactionPagination
 from app_transaction.models import MetaTraderAccount
 from bs4 import BeautifulSoup
 import re
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, time
 from django.utils import timezone
 from rest_framework.parsers import MultiPartParser, FormParser
+
+
+def _parse_decimal(value):
+    """Convert a MetaTrader numeric cell into a Decimal.
+
+    Handles empty cells, non-breaking/regular spaces used as
+    thousand separators, and comma decimal separators.
+    """
+    if value is None:
+        return None
+
+    value = (
+        value.replace("\u00a0", "")
+        .replace(" ", "")
+        .strip()
+    )
+
+    if value in ("", "-", "--"):
+        return None
+
+    if "," in value and "." not in value:
+        value = value.replace(",", ".")
+    else:
+        value = value.replace(",", "")
+
+    return Decimal(value)
 
 
 @extend_schema(tags=["Transaction"])
@@ -249,7 +275,30 @@ def import_metatrader_report(request):
 
     file_content = uploaded_file.read()
 
-    html_content = file_content.decode("utf-8")
+    html_content = None
+
+    for encoding in (
+        "utf-8-sig",
+        "utf-8",
+        "utf-16",
+        "utf-16-le",
+        "utf-16-be",
+        "windows-1252",
+        "latin-1",
+    ):
+        try:
+            html_content = file_content.decode(encoding)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    if html_content is None:
+        return Response(
+            {
+                "detail": "Could not decode the report file."
+            },
+            status=400
+        )
 
     soup = BeautifulSoup(
         html_content,
@@ -320,52 +369,60 @@ def import_metatrader_report(request):
 
         current_row = current_row.find_next_sibling("tr")
 
+    created = 0
+    failed = []
+
     for item in transactions:
-        closed_at = None
+        transaction_type = item["transaction_type"]
 
-        if item["closed_at"]:
-            closed_at = datetime.strptime(
-                item["closed_at"],
-                "%Y.%m.%d %H:%M:%S"
+        if transaction_type not in ("buy", "sell"):
+            failed.append(item.get("mt_ticket"))
+            continue
+
+        try:
+            entry_price = _parse_decimal(item["entry_price"])
+            volume = _parse_decimal(item["volume"])
+
+            if entry_price is None or volume is None:
+                failed.append(item.get("mt_ticket"))
+                continue
+
+            closed_at = None
+
+            if item["closed_at"]:
+                try:
+                    closed_at = timezone.make_aware(
+                        datetime.strptime(
+                            item["closed_at"],
+                            "%Y.%m.%d %H:%M:%S"
+                        )
+                    )
+                except ValueError:
+                    closed_at = None
+
+            Transaction.objects.create(
+                portfolio=portfolio,
+                mt_ticket=item["mt_ticket"],
+                symbol=item["symbol"],
+                transaction_type=transaction_type,
+                entry_price=entry_price,
+                exit_price=_parse_decimal(item["exit_price"]),
+                volume=volume,
+                stop_loss=_parse_decimal(item["stop_loss"]),
+                take_profit=_parse_decimal(item["take_profit"]),
+                profit_loss=_parse_decimal(item["profit_loss"]),
+                closed_at=closed_at,
             )
+        except (InvalidOperation, ValueError):
+            failed.append(item.get("mt_ticket"))
+            continue
 
-            closed_at = timezone.make_aware(
-                closed_at
-            )
-
-        Transaction.objects.create(
-            portfolio=portfolio,
-            mt_ticket=item["mt_ticket"],
-            symbol=item["symbol"],
-            transaction_type=item["transaction_type"],
-            entry_price=Decimal(item["entry_price"]),
-            exit_price=(
-                Decimal(item["exit_price"])
-                if item["exit_price"]
-                else None
-            ),
-            volume=Decimal(item["volume"]),
-            stop_loss=(
-                Decimal(item["stop_loss"])
-                if item["stop_loss"]
-                else None
-            ),
-            take_profit=(
-                Decimal(item["take_profit"])
-                if item["take_profit"]
-                else None
-            ),
-            profit_loss=(
-                Decimal(item["profit_loss"])
-                if item["profit_loss"]
-                else None
-            ),
-            closed_at=closed_at,
-        )
+        created += 1
 
     return Response(
         {
-            "message": f"{len(transactions)} transactions imported successfully."
+            "message": f"{created} transactions imported successfully.",
+            "failed": failed,
         },
         status=200
     )
