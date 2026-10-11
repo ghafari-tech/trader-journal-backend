@@ -21,10 +21,3 @@ class PaymentRequestResponseSerializer(serializers.Serializer):
     original_amount = serializers.IntegerField()
     amount = serializers.IntegerField()
     discount_amount = serializers.IntegerField()
-
-
-class PaymentVerifyResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()
-    code = serializers.CharField()
-    message = serializers.CharField()
-    ref_id = serializers.CharField(required=False, allow_null=True)

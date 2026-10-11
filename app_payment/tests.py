@@ -89,7 +89,9 @@ class PaymentApiTests(TestCase):
 			{'Authority': payment.authority, 'Status': 'OK'},
 		)
 
-		self.assertEqual(response.status_code, 400)
+		self.assertEqual(response.status_code, 302)
+		self.assertIn('payment=failed', response.url)
+		self.assertIn('code=PAYMENT_NOT_VERIFIED', response.url)
 		self.user_subscription.refresh_from_db()
 		payment.refresh_from_db()
 		self.assertEqual(self.user_subscription.type, self.free_subscription)
@@ -114,7 +116,10 @@ class PaymentApiTests(TestCase):
 			{'Authority': payment.authority, 'Status': 'OK'},
 		)
 
-		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.status_code, 302)
+		self.assertIn('payment=success', response.url)
+		self.assertIn('code=PAYMENT_VERIFIED', response.url)
+		self.assertIn('ref_id=123456789', response.url)
 		self.user_subscription.refresh_from_db()
 		payment.refresh_from_db()
 		self.assertEqual(self.user_subscription.type, self.paid_subscription)
@@ -145,7 +150,10 @@ class PaymentApiTests(TestCase):
 		first_end_date = UserSubscription.objects.get(user=self.user).end_date
 		second_response = self.client.get(callback, params)
 
-		self.assertEqual(first_response.status_code, 200)
-		self.assertEqual(second_response.data['code'], 'ALREADY_VERIFIED')
+		self.assertEqual(first_response.status_code, 302)
+		self.assertIn('payment=success', first_response.url)
+		self.assertEqual(second_response.status_code, 302)
+		self.assertIn('payment=success', second_response.url)
+		self.assertIn('code=ALREADY_VERIFIED', second_response.url)
 		self.assertEqual(UserSubscription.objects.get(user=self.user).end_date, first_end_date)
 		self.assertEqual(post.call_count, 1)

@@ -1,10 +1,11 @@
 import logging
 from datetime import timedelta
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import requests
 from django.conf import settings
 from django.db import models, transaction
-from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import (
@@ -20,8 +21,19 @@ from .models import DiscountCode, Payment
 from .serializers import (
     PaymentRequestResponseSerializer,
     PaymentRequestSerializer,
-    PaymentVerifyResponseSerializer,
 )
+
+
+def _build_frontend_redirect(base_url, **extra_params):
+    """Attach extra query params to the configured frontend URL."""
+    parts = urlsplit(base_url)
+    query = parts.query
+    extra = urlencode(extra_params)
+    if query and extra:
+        query = f'{query}&{extra}'
+    else:
+        query = query or extra
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
 
 
 logger = logging.getLogger(__name__)
@@ -152,40 +164,50 @@ def create_payment(request):
 
 @extend_schema(
     tags=['Payment'],
-    responses={200: PaymentVerifyResponseSerializer},
+    responses={302: None},
 )
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def verify_payment(request):
+    """
+    Zarinpal callback endpoint.
+
+    Performs the real gateway verification on the backend and then redirects
+    the user to the frontend result page (success or failure). Never reports
+    success unless the gateway actually verified the payment.
+    """
     authority = request.query_params.get('Authority')
+    status_param = request.query_params.get('Status')
+
+    def fail_redirect(**params):
+        return redirect(
+            _build_frontend_redirect(
+                settings.FRONTEND_PAYMENT_FAILED_URL, **params
+            )
+        )
+
     if not authority:
-        return Response(
-            {'success': False, 'code': 'MISSING_AUTHORITY'},
-            status=400,
-        )
+        return fail_redirect(code='MISSING_AUTHORITY')
 
-    payment = get_object_or_404(
-        Payment.objects.select_related('subscription', 'user', 'discount_code'),
-        authority=authority,
-    )
+    payment = Payment.objects.select_related(
+        'subscription', 'user', 'discount_code'
+    ).filter(authority=authority).first()
+    if payment is None:
+        return fail_redirect(code='PAYMENT_NOT_FOUND')
+
+    # Idempotent: already verified payments go straight to success.
     if payment.is_paid:
-        return Response({
-            'success': True,
-            'code': 'ALREADY_VERIFIED',
-            'message': 'Payment was already verified.',
-            'ref_id': payment.ref_id,
-        })
-
-    if request.query_params.get('Status') != 'OK':
-        return Response(
-            {
-                'success': False,
-                'code': 'PAYMENT_NOT_COMPLETED',
-                'message': 'The payment was not completed.',
-            },
-            status=400,
+        return redirect(
+            _build_frontend_redirect(
+                settings.FRONTEND_PAYMENT_SUCCESS_URL,
+                code='ALREADY_VERIFIED',
+                ref_id=payment.ref_id or '',
+            )
         )
+
+    if status_param != 'OK':
+        return fail_redirect(code='PAYMENT_NOT_COMPLETED')
 
     try:
         gateway_response = requests.post(
@@ -208,31 +230,22 @@ def verify_payment(request):
         gateway_data = gateway_response.json().get('data', {})
     except (requests.RequestException, ValueError, AttributeError):
         logger.exception('Zarinpal payment verification failed')
-        return Response(
-            {'success': False, 'code': 'GATEWAY_VERIFY_FAILED'},
-            status=502,
-        )
+        return fail_redirect(code='GATEWAY_VERIFY_FAILED')
 
     if gateway_data.get('code') not in (100, 101):
-        return Response(
-            {
-                'success': False,
-                'code': 'PAYMENT_NOT_VERIFIED',
-                'message': 'Zarinpal did not verify the payment.',
-            },
-            status=400,
-        )
+        return fail_redirect(code='PAYMENT_NOT_VERIFIED')
 
     today = timezone.localdate()
     with transaction.atomic():
         payment = Payment.objects.select_for_update().get(pk=payment.pk)
         if payment.is_paid:
-            return Response({
-                'success': True,
-                'code': 'ALREADY_VERIFIED',
-                'message': 'Payment was already verified.',
-                'ref_id': payment.ref_id,
-            })
+            return redirect(
+                _build_frontend_redirect(
+                    settings.FRONTEND_PAYMENT_SUCCESS_URL,
+                    code='ALREADY_VERIFIED',
+                    ref_id=payment.ref_id or '',
+                )
+            )
 
         user_subscription = (
             UserSubscription.objects.select_for_update()
@@ -261,9 +274,10 @@ def verify_payment(request):
         payment.ref_id = gateway_data.get('ref_id')
         payment.save(update_fields=['is_paid', 'ref_id'])
 
-    return Response({
-        'success': True,
-        'code': 'PAYMENT_VERIFIED',
-        'message': 'Payment verified and subscription updated.',
-        'ref_id': payment.ref_id,
-    })
+    return redirect(
+        _build_frontend_redirect(
+            settings.FRONTEND_PAYMENT_SUCCESS_URL,
+            code='PAYMENT_VERIFIED',
+            ref_id=payment.ref_id or '',
+        )
+    )

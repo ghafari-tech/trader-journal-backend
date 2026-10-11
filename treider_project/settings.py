@@ -214,3 +214,13 @@ ZARINPAL_CALLBACK_URL = config(
     'ZARINPAL_CALLBACK_URL',
     default='http://127.0.0.1:8000/payment/verify/',
 )
+
+
+FRONTEND_PAYMENT_SUCCESS_URL = config(
+    'FRONTEND_PAYMENT_SUCCESS_URL',
+    default='https://trade.piqagram.ir/app/settings?tab=subscription&payment=success',
+)
+FRONTEND_PAYMENT_FAILED_URL = config(
+    'FRONTEND_PAYMENT_FAILED_URL',
+    default='https://trade.piqagram.ir/app/settings?tab=subscription&payment=failed',
+)

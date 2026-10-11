@@ -59,7 +59,9 @@ class PaymentExtraTests(TestCase):
 
     def test_verify_missing_authority(self):
         resp = self.client.get(reverse('payment-verify'))
-        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('payment=failed', resp.url)
+        self.assertIn('code=MISSING_AUTHORITY', resp.url)
 
     @patch('app_payment.views.requests.post')
     def test_verify_creates_subscription_when_missing(self, post):
@@ -70,5 +72,6 @@ class PaymentExtraTests(TestCase):
         post.return_value = self._gw({'code': 100, 'ref_id': 'R1'})
         resp = self.client.get(reverse('payment-verify'),
                                {'Authority': 'AUTH2', 'Status': 'OK'})
-        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('payment=success', resp.url)
         self.assertTrue(UserSubscription.objects.filter(user=self.user, type=self.pro).exists())
