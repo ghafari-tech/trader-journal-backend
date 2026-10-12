@@ -218,9 +218,9 @@ ZARINPAL_CALLBACK_URL = config(
 
 FRONTEND_PAYMENT_SUCCESS_URL = config(
     'FRONTEND_PAYMENT_SUCCESS_URL',
-    default='https://trade.piqagram.ir/app/settings?tab=subscription&payment=success',
+    default='https://mdf.piqagram.ir/app/settings?tab=subscription&payment=success',
 )
 FRONTEND_PAYMENT_FAILED_URL = config(
     'FRONTEND_PAYMENT_FAILED_URL',
-    default='https://trade.piqagram.ir/app/settings?tab=subscription&payment=failed',
+    default='https://mdf.piqagram.ir/app/settings?tab=subscription&payment=failed',
 )

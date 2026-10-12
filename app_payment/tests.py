@@ -90,6 +90,9 @@ class PaymentApiTests(TestCase):
 		)
 
 		self.assertEqual(response.status_code, 302)
+		self.assertTrue(response.url.startswith(
+			'https://mdf.piqagram.ir/app/settings?tab=subscription&payment=failed'
+		))
 		self.assertIn('payment=failed', response.url)
 		self.assertIn('code=PAYMENT_NOT_VERIFIED', response.url)
 		self.user_subscription.refresh_from_db()
@@ -117,6 +120,9 @@ class PaymentApiTests(TestCase):
 		)
 
 		self.assertEqual(response.status_code, 302)
+		self.assertTrue(response.url.startswith(
+			'https://mdf.piqagram.ir/app/settings?tab=subscription&payment=success'
+		))
 		self.assertIn('payment=success', response.url)
 		self.assertIn('code=PAYMENT_VERIFIED', response.url)
 		self.assertIn('ref_id=123456789', response.url)
@@ -157,3 +163,26 @@ class PaymentApiTests(TestCase):
 		self.assertIn('code=ALREADY_VERIFIED', second_response.url)
 		self.assertEqual(UserSubscription.objects.get(user=self.user).end_date, first_end_date)
 		self.assertEqual(post.call_count, 1)
+
+	@patch('app_payment.views.requests.post')
+	def test_cancelled_callback_redirects_to_frontend_failed_tab(self, post):
+		payment = Payment.objects.create(
+			authority='cancelled-authority',
+			amount=self.paid_subscription.price * 10,
+			subscription=self.paid_subscription,
+			user=self.user,
+		)
+
+		response = self.client.get(
+			reverse('payment-verify'),
+			{'Authority': payment.authority, 'Status': 'NOK'},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertTrue(response.url.startswith(
+			'https://mdf.piqagram.ir/app/settings?tab=subscription&payment=failed'
+		))
+		self.assertIn('code=PAYMENT_NOT_COMPLETED', response.url)
+		post.assert_not_called()
+		payment.refresh_from_db()
+		self.assertFalse(payment.is_paid)
